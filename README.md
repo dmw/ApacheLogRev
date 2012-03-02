@@ -107,6 +107,13 @@ git push origin my-logrev-branch
 12. Click "Pull Request"
 13. Submit your pull request to ApacheLogRev Developers
 
+Samples
+---
+
+![Country Percentage Report](https://github.com/dmw/ApacheLogRev/raw/master/report_country_pie.png)
+
+![Request Status Percentage Report](https://github.com/dmw/ApacheLogRev/raw/master/report_status_pie.png)
+
 
 Support
 ---
