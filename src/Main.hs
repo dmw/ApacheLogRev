@@ -17,14 +17,17 @@ module Main (main) where
 
 import qualified Data.ByteString.Char8 as B
 import qualified Data.Map as M
+import qualified Data.String.Utils as S
+import qualified Control.Monad as D
 import Data.Char
 import Data.Colour
 import Data.Colour.Names
 import Data.Geolocation.GeoIP
 import Data.List
 import Data.LogRev.LogStats
+import Data.LogRev.Parser
+import Data.LogRev.Processing
 import Data.Maybe
-import Data.String.Utils
 import Graphics.LogRev.Charts
 import System.Console.GetOpt
 import System.Environment
@@ -32,7 +35,6 @@ import System.Exit
 import System.IO
 import System.IO.Unsafe
 import System.Posix.Temp
-import Text.ParserCombinators.Parsec
 import Text.Printf
 
 
@@ -81,51 +83,6 @@ startOptions = LogRevOptions {
 bringGeoDB :: String -> GeoDB
 bringGeoDB x = unsafePerformIO $ openGeoDB memory_cache x
 
-plainValue :: Parser String
-plainValue = many1 (noneOf " \n")
-
-bracketedValue :: Parser String
-bracketedValue = do
-  char '['
-  content <- many (noneOf "]")
-  char ']'
-  return content
-
-quotedValue :: Parser String
-quotedValue = do
-  char '"'
-  content <- many (noneOf "\"")
-  char '"'
-  return content
-
-dashChar :: Parser String
-dashChar = do
-  x <- char '-'
-  return (show x)
-
-logLine :: Parser LogLine
-logLine = do
-  vhost <- plainValue
-  space
-  ip <- plainValue
-  space
-  ident <- plainValue
-  space
-  user <- plainValue
-  space
-  date <- bracketedValue
-  space
-  req <- quotedValue
-  space
-  status <- plainValue
-  space
-  bytes <- plainValue
-  space
-  ref <- dashChar <|> quotedValue
-  space
-  ua <- dashChar <|> quotedValue
-  return $ LogLine vhost ip ident user date req status bytes ref ua
-
 progOptions :: [OptDescr (LogRevOptions -> IO LogRevOptions)]
 progOptions =
   [ Option "m" ["map"] (ReqArg (\x o -> return o { mapFile = x }) "FILE") "map file"
@@ -141,41 +98,9 @@ progOptions =
                                          exitWith ExitSuccess)) "displays this message"
   ]
 
-parseLogLine :: String -> Maybe LogLine
-parseLogLine s = let r = parse logLine "[Invalid]" s
-                         in case r of
-                                 Left perr -> Nothing
-                                 Right itm -> Just itm
-
-addIntMapEntry :: String -> StringIntMap -> StringIntMap
-addIntMapEntry loc m = if M.member loc m
-                          then M.insert loc ((m M.! loc) + 1) m
-                          else M.insert loc 1 m
-
-addPIntMapEntry :: String
-                   -> Int
-                   -> StringIntMap
-                   -> StringIntMap
-addPIntMapEntry loc v m = if M.member loc m
-                             then M.insert loc ((m M.! loc) + v) m
-                             else M.insert loc 1 m
-
-addFltMapEntry :: String -> StringDoubleMap -> StringDoubleMap
-addFltMapEntry loc m = if M.member loc m
-                          then M.insert loc ((m M.! loc) + 1.0) m
-                          else M.insert loc 1 m
-
-addPFltMapEntry :: String
-                   -> Double
-                   -> StringDoubleMap
-                   -> StringDoubleMap
-addPFltMapEntry loc v m = if M.member loc m
-                             then M.insert loc ((m M.! loc) + v) m
-                             else M.insert loc 1 m
-
 logRevMakeStringStat :: LogRevStatsAction -> String
 logRevMakeStringStat l = printf "%s:\n%s\n" (aHeader l)
-                         $ join "\n"
+                         $ S.join "\n"
                          $ fmap (\x -> printf f
                                        x (r M.! x) (s M.! x)
                                        (logRevCntPer l x) (logRevSzPer l x)) m
@@ -184,51 +109,6 @@ logRevMakeStringStat l = printf "%s:\n%s\n" (aHeader l)
                                m = sort $ M.keys r
                                o = aOutput l
                                f = "%10.10s: %10.d %10.d %10.2f %10.2f"
-
-statsHandlerStatus :: LogRevOptions -> LogRevStats -> LogLine -> LogRevStats
-statsHandlerStatus o s l = r
-                           where r = s { sMap   = x
-                                       , sSz    = z
-                                       , sPer   = M.empty
-                                       , sTot   = sTot s + 1
-                                       , sSzTot = sSzTot s + getReqSz l
-                                       }
-                                 x = addIntMapEntry t (sMap s)
-                                 z = addPIntMapEntry t (getReqSz l) (sSz s)
-                                 t = getStatus l
-
-statsHandlerCountry :: LogRevOptions -> LogRevStats -> LogLine -> LogRevStats
-statsHandlerCountry o s l = r
-                            where r = s { sMap   = x
-                                        , sSz    = z
-                                        , sPer   = M.empty
-                                        , sTot   = sTot s + 1
-                                        , sSzTot = sSzTot s + getReqSz l
-                                        }
-                                  y = geoLookupAddr o (getIP l)
-                                  x = addIntMapEntry y (sMap s)
-                                  z = addPIntMapEntry y (getReqSz l) (sSz s)
-
-statsHandlerBytes :: LogRevOptions -> LogRevStats -> LogLine -> LogRevStats
-statsHandlerBytes o s l = r
-                          where r = s { sMap = x
-                                      , sSz    = z
-                                      , sPer = M.empty
-                                      , sTot = sTot s + 1
-                                      , sSzTot = sSzTot s + getReqSz l
-                                      }
-                                y = getBytes l
-                                x = addIntMapEntry y (sMap s)
-                                z = addPIntMapEntry y (getReqSz l) (sSz s)
-
-geoLookupAddr :: LogRevOptions -> String -> String
-geoLookupAddr o s = B.unpack r
-                    where g = geoHdl o
-                          a = geoLocateByIPAddress g (B.pack s)
-                          r = geoCountryCode3 $ fromJust a
-
-getReqSz :: LogLine -> Int
-getReqSz l = read $ strip $ getBytes l
 
 applyAction :: LogRevOptions
                -> LogRevStatsAction
@@ -242,7 +122,7 @@ procLogMachine :: LogRevOptions
                   -> [LogRevStatsAction]
                   -> LogLine
                   -> [LogRevStatsAction]
-procLogMachine o m l = fmap (\ x -> applyAction o x l ) m
+procLogMachine o m l = fmap (flip (applyAction o) l) m
 
 procLineString :: LogRevOptions
                   -> [LogRevStatsAction]
@@ -251,14 +131,13 @@ procLineString :: LogRevOptions
 procLineString m s x = let r = parseLogLine x
                            in if r == Nothing
                                  then s
-                                 else procLogMachine m s
-                                      $ fromJust r
+                                 else procLogMachine m s (fromJust r)
 
 processLogFileLoop :: [LogRevStatsAction] -> LogRevOptions -> Handle -> IO ()
 processLogFileLoop a o fh = do x <- hIsEOF fh
                                if x
-                                  then putStrLn (join "\n" $ fmap logRevMakeStringStat a)
-                                       >> mapM_ (\x -> aPlot x o x) a
+                                  then putStrLn (S.join "\n" $ fmap logRevMakeStringStat a)
+                                       >> mapM_ (D.join (flip aPlot o)) a
                                   else do ins <- hGetLine fh
                                           processLogFileLoop (procLineString o a ins) o fh
 

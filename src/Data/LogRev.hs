@@ -17,6 +17,8 @@
 module Data.LogRev (
 
   module Data.LogRev.LogStats
+  , module Data.LogRev.Parser
+  , module Data.LogRev.Processing
 
   ) where
 

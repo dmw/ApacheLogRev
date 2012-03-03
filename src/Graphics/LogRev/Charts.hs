@@ -1,6 +1,6 @@
 ----------------------------------------------------------------------------
 -- |
--- Module      :  Data.LogRev
+-- Module      :  Graphics.LogRev.Charts
 -- Copyright   :  (c) Daniel Molina Wegener 2012
 -- License     :  BSD 3 (see the LICENSE file)
 -- Author      :  Daniel Molina Wegener <dmw@coder.cl>
@@ -15,9 +15,9 @@
 
 module Graphics.LogRev.Charts (
   plotPngPieChart
-  , getActionValuesPie
   , logRevCntPer
   , logRevSzPer
+  , getActionValuesPie
   ) where
 
 
@@ -52,13 +52,6 @@ plotPngPieChart o l = renderableToPNGFile chart 800 600 fname
                                                               yellow, cyan,
                                                               magenta, goldenrod]
 
-getActionValuesPie :: LogRevOptions -> LogRevStatsAction -> [(String, Double, Double)]
-getActionValuesPie o l = fmap (buildTuple l) kxs
-                         where kxs = sort $ M.keys (sMap (aOutput l))
-                               buildTuple u v = let x = logRevCntPer u v
-                                                    y = buildLabel v x
-                                                    in (y, x, 0.5)
-
 buildLabel :: String -> Double -> String
 buildLabel = printf "%s / %3.2f%%"
 
@@ -80,3 +73,10 @@ logRevSzPer a k = 100.0 * n / t
                         t = fromIntegral $ sSzTot o
                         m = sSz o
                         n = fromIntegral $ m M.! k
+
+getActionValuesPie :: LogRevOptions -> LogRevStatsAction -> [(String, Double, Double)]
+getActionValuesPie o l = fmap (buildTuple l) kxs
+                         where kxs = sort $ M.keys (sMap (aOutput l))
+                               buildTuple u v = let x = logRevCntPer u v
+                                                    y = buildLabel v x
+                                                    in (y, x, 0.5)
