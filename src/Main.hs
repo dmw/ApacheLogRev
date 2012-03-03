@@ -53,13 +53,7 @@ actionMap = [LogRevStatsAction {
                 aHeader   = "Status"
                 , aAction = statsHandlerStatus
                 , aOutput = emptyLogRevStats
-                , aPlot   = plotPngPieChart
-                },
-             LogRevStatsAction {
-                aHeader = "Bytes"
-                , aAction = statsHandlerBytes
-                , aOutput = emptyLogRevStats
-                , aPlot   = plotPngPieChart
+                , aPlot   = plotPngBarChart
                 },
              LogRevStatsAction {
                 aHeader = "Country"
@@ -153,3 +147,4 @@ main = do
     opts <- foldl (>>=) (return startOptions) act
     putStrLn $ printf "Processing: %s\n" (inpFile opts)
     readLogFile actionMap opts
+
