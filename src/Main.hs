@@ -149,4 +149,3 @@ main = do
     opts <- foldl (>>=) (return startOptions) act
     putStrLn $ printf "Processing: %s\n" (inpFile opts)
     readLogFile actionMap opts
-
