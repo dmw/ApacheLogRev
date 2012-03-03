@@ -1,55 +1,36 @@
-name: ApacheLogRev
-version: 0.0.1
-cabal-version: -any
-build-type: Simple
-license: BSD3
-license-file: /work/haskell/leksah/ApacheLogRev/LICENSE
-copyright: Daniel Molina Wegener
-maintainer: Daniel Molina Wegener
-build-depends: Chart -any, Chart-gtk -any, MissingH -any,
-               base -any, bytestring -any, colour -any, containers -any,
-               data-accessor -any, hs-GeoIP -any, parsec -any, text -any,
-               time >= 1.2.0.3, unix -any
-stability:
-homepage: http://coder.cl/products/logrev/
-package-url:
-bug-reports:
-synopsis: Generate statistics from Apache access logs
-description: ApacheLogRev (logrev) is a command line tool that allows that parses Apache Access Logs
-             and generate statistics Charts from it in PNG format and plain text format (parseable format).
-category: Statistic
-author: Daniel Molina Wegener
-tested-with: GHC >= 7.0.3
-data-files:
-data-dir: ""
-extra-source-files:
-extra-tmp-files:
+Name:                ApacheLogRev
+Version:             0.0.1
+Synopsis:            A tool to generate statistics charts from Apache Access Logs
+Homepage:            https://github.com/dmw/ApacheLogRev
+Package-Url:	     http://coder.cl/downloads/logrev-0.0.1.tar.gz
+Bug-Reports:	     https://github.com/dmw/ApacheLogRev/issues
+License:             BSD3
+License-file:        LICENSE
+Author:              Daniel Molina Wegener
+Maintainer:          dmw@coder.cl
+Category:            Tool
+Build-type:          Simple
+Cabal-version:       >= 1.6
+Stability:	     Unstable
+Description:	     ApacheLogRev (logrev) is a command line tool that allows
+	     	     that parses Apache Access Logs and generate statistics Charts
+	     	     from it in PNG format and plain text format (parseable format).
+Data-Dir:	     lrdata
+Data-Files:	     GeoLiteCity.dat
+Tested-With:	     GHC >= 7.0.3
 
-executable: logrev
-main-is: logrev.hs
-buildable: True
-build-tools:
-cpp-options:
-cc-options:
-ld-options:
-pkgconfig-depends:
-frameworks:
-c-sources:
-default-language:
-other-languages:
-default-extensions:
-other-extensions:
-extensions:
-extra-libraries:
-extra-lib-dirs:
-includes:
-install-includes:
-include-dirs:
-hs-source-dirs: src
-other-modules:
-ghc-prof-options:
-ghc-shared-options:
-ghc-options:
-hugs-options:
-nhc98-options:
-jhc-options:
+Source-repository head
+  type:     git
+  location: https://dmw@github.com/dmw/ApacheLogRev.git
+
+Executable logrev
+  Main-is:		Main.hs
+  Hs-Source-Dirs:	src
+  Build-depends:
+    Chart >= 0.15, Chart-gtk >= 0.15, MissingH >= 1.1.0.3,
+    bytestring >= 0.9.1.10, colour >= 2.3.2, containers >= 0.4.0.0,
+    data-accessor >= 0.2.2.1, hs-GeoIP >= 0.1.1, parsec >= 3.1.1,
+    text >= 0.11.0.6, time >= 1.2.0.3, unix >= 2.4.2.0,
+    base >= 4 && <= 5
+  Other-modules:	Data.LogRev.LogStats
+                        Graphics.LogRev.Charts
