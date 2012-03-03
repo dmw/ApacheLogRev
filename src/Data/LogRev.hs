@@ -22,4 +22,8 @@ module Data.LogRev (
 
   ) where
 
+
 import Data.LogRev.LogStats
+import Data.LogRev.Parser
+import Data.LogRev.Processing
+

@@ -13,6 +13,7 @@
 -- me directly if you want to contribute.
 -----------------------------------------------------------------------------
 
+
 module Graphics.LogRev.Charts (
   plotPngPieChart
   , plotPngBarChart
