@@ -1,6 +1,6 @@
 ----------------------------------------------------------------------------
 -- |
--- Module      :  Data.LogRev
+-- Module      :  Graphics.LogRev.Charts
 -- Copyright   :  (c) Daniel Molina Wegener 2012
 -- License     :  BSD 3 (see the LICENSE file)
 -- Author      :  Daniel Molina Wegener <dmw@coder.cl>
@@ -13,18 +13,21 @@
 -- me directly if you want to contribute.
 -----------------------------------------------------------------------------
 
+
 module Graphics.LogRev.Charts (
   plotPngPieChart
-  , getActionValuesPie
+  , plotPngBarChart
   , logRevCntPer
   , logRevSzPer
+  , getActionValuesPie
+  , getActionValuesBar
   ) where
 
 
+import qualified Data.Colour as C
+import qualified Data.Colour.Names as CN
 import Data.Char
 import Data.Accessor
-import Data.Colour
-import Data.Colour.Names
 import Data.List
 import Data.LogRev.LogStats
 import Data.String.Utils
@@ -34,11 +37,17 @@ import Graphics.Rendering.Chart.Gtk
 import Text.Printf
 
 
+colorLocal :: [C.AlphaColour Double]
+colorLocal = cycle $ fmap C.opaque [CN.darkslateblue, CN.darkcyan, CN.darkgreen,
+                                    CN.darkmagenta, CN.darkblue, CN.darkgrey,
+                                    CN.darkorange, CN.darkseagreen, CN.darkviolet,
+                                    CN.dimgray, CN.dodgerblue, CN.deepskyblue]
+
 plotPngPieChart :: LogRevOptions -> LogRevStatsAction -> IO (PickFn ())
 plotPngPieChart o l = renderableToPNGFile chart 800 600 fname
                       where chart = toRenderable layout
                             layout = pie_title ^= title
-                                     $ pie_plot ^: pie_colors ^= color_local
+                                     $ pie_plot ^: pie_colors ^= colorLocal
                                      $ pie_plot ^: pie_data ^= map pitem values
                                      $ defaultPieLayout
                             values = getActionValuesPie o l
@@ -48,22 +57,38 @@ plotPngPieChart o l = renderableToPNGFile chart 800 600 fname
                                                              }
                             fname = buildFileName o l
                             title = printf "Apache %s" $ aHeader l
-                            color_local = cycle $ map opaque [brown, green,
-                                                              yellow, cyan,
-                                                              magenta, goldenrod]
 
-getActionValuesPie :: LogRevOptions -> LogRevStatsAction -> [(String, Double, Double)]
-getActionValuesPie o l = fmap (buildTuple l) kxs
-                         where kxs = sort $ M.keys (sMap (aOutput l))
-                               buildTuple u v = let x = logRevCntPer u v
-                                                    y = buildLabel v x
-                                                    in (y, x, 0.5)
+plotPngBarChart :: LogRevOptions -> LogRevStatsAction -> IO (PickFn ())
+plotPngBarChart o l = renderableToPNGFile chart 800 600 fname
+                      where chart = toRenderable layout
+                            layout = layout1_title ^= title
+                                     $ layout1_title_style ^: font_size ^= 10
+                                     $ layout1_bottom_axis ^: laxis_generate ^= autoIndexAxis alabels
+                                     $ layout1_plots ^= [ Left (plotBars bars) ]
+                                     $ layout1_legend ^= Just lstyle
+                                     $ defaultLayout1 :: Layout1 PlotIndex Double
+                            bars = plot_bars_titles ^= [title]
+                                   $ plot_bars_values ^= addIndexes values
+                                   $ plot_bars_style ^= BarsClustered
+                                   $ plot_bars_spacing ^= BarsFixGap 10.0 10.0
+                                   $ plot_bars_item_styles ^= map mkstyle (cycle colorLocal)
+                                   $ defaultPlotBars
+                            btitle = ""
+                            bstyle = Just (solidLine 1.0 $ C.opaque CN.black)
+                            mkstyle c = (solidFillStyle c, bstyle)
+                            alabels = sort $ M.keys (sSz (aOutput l))
+                            values = getActionValuesBar o l
+                            fname = buildFileName o l
+                            lstyle = legend_orientation ^= LORows 3 $ defaultLegendStyle
+                            title = printf "Apache %s" $ aHeader l
 
 buildLabel :: String -> Double -> String
 buildLabel = printf "%s / %3.2f%%"
 
 buildFileName :: LogRevOptions -> LogRevStatsAction -> String
-buildFileName o l = fmap toLower $ strip $ replace " " "_" $ printf "%s_%s_pie.png" out rep
+buildFileName o l = fmap toLower (strip (replace
+                                         " " "_"
+                                         (printf "%s_%s_pie.png" out rep)))
                     where out = outFile o
                           rep = aHeader l
 
@@ -80,3 +105,15 @@ logRevSzPer a k = 100.0 * n / t
                         t = fromIntegral $ sSzTot o
                         m = sSz o
                         n = fromIntegral $ m M.! k
+
+getActionValuesPie :: LogRevOptions -> LogRevStatsAction -> [(String, Double, Double)]
+getActionValuesPie o l = fmap (buildTuple l) kxs
+                         where kxs = sort $ M.keys (sMap (aOutput l))
+                               buildTuple u v = let x = logRevCntPer u v
+                                                    y = buildLabel v x
+                                                    in (y, x, 0.5)
+
+getActionValuesBar :: LogRevOptions -> LogRevStatsAction -> [[Double]]
+getActionValuesBar o l = fmap (buildValue l) kxs
+                         where kxs = sort $ M.keys (sMap (aOutput l))
+                               buildValue u v = [logRevCntPer u v]

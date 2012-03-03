@@ -1,6 +1,6 @@
 ----------------------------------------------------------------------------
 -- |
--- Module      :  Data.LogRev
+-- Module      :  Data.LogRev.LogStats
 -- Copyright   :  (c) Daniel Molina Wegener 2012
 -- License     :  BSD 3 (see the LICENSE file)
 -- Author      :  Daniel Molina Wegener <dmw@coder.cl>
@@ -16,12 +16,18 @@
 
 module Data.LogRev.LogStats (
   StringIntMap(..)
+
   , StringDoubleMap(..)
   , LogRevStatsCol(..)
   , LogLine(..)
   , LogRevOptions(..)
   , LogRevStats(..)
   , LogRevStatsAction(..)
+
+  , addIntMapEntry
+  , addPIntMapEntry
+  , addFltMapEntry
+  , addPFltMapEntry
   ) where
 
 
@@ -88,3 +94,29 @@ instance Show LogRevStats where
 instance Show LogRevStatsAction where
   show a = printf " (%s:%s) " (aHeader a) (show (aOutput a))
 
+
+addIntMapEntry :: String -> StringIntMap -> StringIntMap
+addIntMapEntry loc m = if M.member loc m
+                          then M.insert loc ((m M.! loc) + 1) m
+                          else M.insert loc 1 m
+
+addPIntMapEntry :: String
+                   -> Int
+                   -> StringIntMap
+                   -> StringIntMap
+addPIntMapEntry loc v m = if M.member loc m
+                             then M.insert loc ((m M.! loc) + v) m
+                             else M.insert loc 1 m
+
+addFltMapEntry :: String -> StringDoubleMap -> StringDoubleMap
+addFltMapEntry loc m = if M.member loc m
+                          then M.insert loc ((m M.! loc) + 1.0) m
+                          else M.insert loc 1 m
+
+addPFltMapEntry :: String
+                   -> Double
+                   -> StringDoubleMap
+                   -> StringDoubleMap
+addPFltMapEntry loc v m = if M.member loc m
+                             then M.insert loc ((m M.! loc) + v) m
+                             else M.insert loc 1 m

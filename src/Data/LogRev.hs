@@ -17,7 +17,13 @@
 module Data.LogRev (
 
   module Data.LogRev.LogStats
+  , module Data.LogRev.Parser
+  , module Data.LogRev.Processing
 
   ) where
 
+
 import Data.LogRev.LogStats
+import Data.LogRev.Parser
+import Data.LogRev.Processing
+
