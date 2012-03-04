@@ -110,9 +110,9 @@ git push origin my-logrev-branch
 Samples
 ---
 
-![Country Percentage Report](https://github.com/dmw/ApacheLogRev/raw/master/report_country_pie.png)
+![Country Percentage Report](https://github.com/dmw/ApacheLogRev/raw/master/report_country.png)
 
-![Request Status Percentage Report](https://github.com/dmw/ApacheLogRev/raw/master/report_status_pie.png)
+![Request Status Percentage Report](https://github.com/dmw/ApacheLogRev/raw/master/report_status.png)
 
 
 Support

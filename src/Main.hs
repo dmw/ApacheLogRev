@@ -41,7 +41,7 @@ import Text.Printf
 
 
 progVersion :: String
-progVersion = "1.0"
+progVersion = "ApacheLogRev 0.0.1"
 
 emptyLogRevStats :: LogRevStats
 emptyLogRevStats = LogRevStats { sTot   = 0
@@ -61,7 +61,7 @@ actionMap = [LogRevStatsAction {
                 aHeader = "Country"
                 , aAction = statsHandlerCountry
                 , aOutput = emptyLogRevStats
-                , aPlot   = plotPngPieChart
+                , aPlot   = plotPngBarChart
                 }]
 
 startOptions :: LogRevOptions
@@ -87,7 +87,7 @@ progOptions =
   , Option "g" ["geo"] (ReqArg (\x o -> return o { geoFile = x,
                                                    geoHdl = bringGeoDB x }) "FILE") "GeoIP database file"
   , Option "v" ["verbose"] (NoArg (\o -> return o { optVerbose = True })) "verbose output"
-  , Option "V" ["version"] (NoArg (\_ -> hPutStrLn stderr "Version 0.01"
+  , Option "V" ["version"] (NoArg (\_ -> hPutStrLn stderr progVersion
                                          >> exitWith ExitSuccess)) "displays program version"
   , Option "h" ["help"] (NoArg (\_ -> do prg <- getProgName
                                          hPutStrLn stderr (usageInfo prg progOptions)
@@ -125,9 +125,9 @@ procLineString :: LogRevOptions
                   -> String
                   -> [LogRevStatsAction]
 procLineString m s x = let r = parseLogLine x
-                           in if r == Nothing
-                                 then s
-                                 else procLogMachine m s (fromJust r)
+                           in if r /= Nothing
+                                 then procLogMachine m s (fromJust r)
+                                 else s
 
 processLogFileLoop :: [LogRevStatsAction] -> LogRevOptions -> Handle -> IO ()
 processLogFileLoop a o fh = do x <- hIsEOF fh
