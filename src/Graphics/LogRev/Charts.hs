@@ -53,7 +53,7 @@ plotPngPieChart o l = renderableToPNGFile chart 800 600 fname
                             values = getActionValuesPie o l
                             pitem (s, v, o) = defaultPieItem { pitem_value_ = v
                                                              , pitem_label_ = s
-                                                             , pitem_offset_= 1.0
+                                                             , pitem_offset_= 5.0
                                                              }
                             fname = buildFileName o l
                             title = printf "Apache %s" $ aHeader l
@@ -67,20 +67,26 @@ plotPngBarChart o l = renderableToPNGFile chart 800 600 fname
                                      $ layout1_plots ^= [ Left (plotBars bars) ]
                                      $ layout1_legend ^= Just lstyle
                                      $ defaultLayout1 :: Layout1 PlotIndex Double
-                            bars = plot_bars_titles ^= [title]
+                            bars = plot_bars_titles ^= [title_q, title_s]
                                    $ plot_bars_values ^= addIndexes values
                                    $ plot_bars_style ^= BarsClustered
                                    $ plot_bars_spacing ^= BarsFixGap 10.0 10.0
                                    $ plot_bars_item_styles ^= map mkstyle (cycle colorLocal)
                                    $ defaultPlotBars
                             btitle = ""
+                            hdr = aHeader l
+                            out = aOutput l
+                            sz = sSzTot out
+                            tot = sTot out
                             bstyle = Just (solidLine 1.0 $ C.opaque CN.black)
                             mkstyle c = (solidFillStyle c, bstyle)
-                            alabels = sort $ M.keys (sSz (aOutput l))
+                            alabels = sort $ M.keys (sSz out)
                             values = getActionValuesBar o l
                             fname = buildFileName o l
                             lstyle = legend_orientation ^= LORows 3 $ defaultLegendStyle
-                            title = printf "Apache %s" $ aHeader l
+                            title_q = printf "Apache %s Hit%% | %d (count)" hdr tot
+                            title_s = printf "Apache %s Size%% | %d (bytes)" hdr sz
+                            title = printf "Apache %s" hdr
 
 buildLabel :: String -> Double -> String
 buildLabel = printf "%s / %3.2f%%"
@@ -88,7 +94,7 @@ buildLabel = printf "%s / %3.2f%%"
 buildFileName :: LogRevOptions -> LogRevStatsAction -> String
 buildFileName o l = fmap toLower (strip (replace
                                          " " "_"
-                                         (printf "%s_%s_pie.png" out rep)))
+                                         (printf "%s_%s.png" out rep)))
                     where out = outFile o
                           rep = aHeader l
 
@@ -116,4 +122,4 @@ getActionValuesPie o l = fmap (buildTuple l) kxs
 getActionValuesBar :: LogRevOptions -> LogRevStatsAction -> [[Double]]
 getActionValuesBar o l = fmap (buildValue l) kxs
                          where kxs = sort $ M.keys (sMap (aOutput l))
-                               buildValue u v = [logRevCntPer u v]
+                               buildValue u v = [logRevCntPer u v, logRevSzPer u v]
