@@ -55,7 +55,6 @@ Usage
 logrev --help
 
 logrev
-  -m FILE  --map=FILE     map file
   -i FILE  --input=FILE   input file
   -o FILE  --output=FILE  output file
   -g FILE  --geo=FILE     GeoIP database file
