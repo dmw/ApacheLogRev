@@ -61,10 +61,9 @@ data LogRevOptions = LogRevOptions {
   optVerbose    :: Bool
   , optVersion  :: Bool
   , optHelp     :: Bool
-  , mapFile     :: String
-  , geoFile     :: String
   , inpFile     :: String
   , outFile     :: String
+  , geoFile     :: String
   , geoHdl      :: GeoDB
 }
 
