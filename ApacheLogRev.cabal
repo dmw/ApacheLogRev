@@ -16,7 +16,7 @@ Description:	     ApacheLogRev (logrev) is a command line tool that allows
 	     	     that parses Apache Access Logs and generate statistics Charts
 	     	     from it in PNG format and plain text format (parseable format).
 Data-Dir:	     lrdata
-Data-Files:	     GeoLiteCity.dat
+Data-File:
 Tested-With:	     GHC >= 7.0.3
 
 Source-repository head

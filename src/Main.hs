@@ -69,11 +69,10 @@ startOptions = LogRevOptions {
   optVerbose    = False
   , optVersion  = False
   , optHelp     = False
-  , geoFile     = "/usr/share/GeoIP/GeoLiteCity.dat"
-  , mapFile     = "/usr/share/doc/gnuplot-doc/examples/world.dat"
   , inpFile     = "main.log"
-  , outFile     = "report.png"
+  , outFile     = "report"
   , geoHdl      = bringGeoDB "/usr/share/GeoIP/GeoLiteCity.dat"
+  , geoFile     = "/usr/share/GeoIP/GeoLiteCity.dat"
 }
 
 bringGeoDB :: String -> GeoDB
@@ -81,8 +80,7 @@ bringGeoDB x = unsafePerformIO $ openGeoDB memory_cache x
 
 progOptions :: [OptDescr (LogRevOptions -> IO LogRevOptions)]
 progOptions =
-  [ Option "m" ["map"] (ReqArg (\x o -> return o { mapFile = x }) "FILE") "map file"
-  , Option "i" ["input"] (ReqArg (\x o -> return o { inpFile = x }) "FILE") "input file"
+  [ Option "i" ["input"] (ReqArg (\x o -> return o { inpFile = x }) "FILE") "input file"
   , Option "o" ["output"] (ReqArg (\x o -> return o { outFile = x }) "FILE") "output file"
   , Option "g" ["geo"] (ReqArg (\x o -> return o { geoFile = x,
                                                    geoHdl = bringGeoDB x }) "FILE") "GeoIP database file"
@@ -137,15 +135,23 @@ processLogFileLoop a o fh = do x <- hIsEOF fh
                                   else do ins <- hGetLine fh
                                           processLogFileLoop (procLineString o a ins) o fh
 
+handlerIOError :: IOError -> IO ()
+handlerIOError e = putStrLn (printf "IOError: %s" $ show e)
+                   >> exitFailure
+
 readLogFile :: [LogRevStatsAction] -> LogRevOptions -> IO ()
 readLogFile a o = do fh <- openFile (inpFile o) ReadMode
                      processLogFileLoop a o fh
                      hClose fh
 
-main :: IO ()
-main = do
+processArgs :: IO ()
+processArgs = do
     argv <- getArgs
     let (act, nopt, errs) = getOpt RequireOrder progOptions argv
     opts <- foldl (>>=) (return startOptions) act
     putStrLn $ printf "Processing: %s\n" (inpFile opts)
     readLogFile actionMap opts
+
+main :: IO ()
+main = processArgs `catch` handlerIOError
+
