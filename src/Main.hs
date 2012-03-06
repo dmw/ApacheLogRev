@@ -71,25 +71,50 @@ startOptions = LogRevOptions {
   , optHelp     = False
   , inpFile     = "main.log"
   , outFile     = "report"
-  , geoHdl      = bringGeoDB "/usr/share/GeoIP/GeoLiteCity.dat"
+  , geoHdl      = bringGeoDB Nothing
   , geoFile     = "/usr/share/GeoIP/GeoLiteCity.dat"
 }
 
-bringGeoDB :: String -> GeoDB
-bringGeoDB x = unsafePerformIO $ openGeoDB memory_cache x
+
+bringSafeGeoBD0 :: GeoDB
+bringSafeGeoBD0 = unsafePerformIO
+                  $ fromJust
+                  $ safeOpenGeoDBCity0 memory_cache
+
+bringSafeGeoBD1 :: GeoDB
+bringSafeGeoBD1 = unsafePerformIO
+                  $ fromJust
+                  $ safeOpenGeoDBCity0 memory_cache
+
+bringGeoDB :: Maybe String -> GeoDB
+bringGeoDB x = if x /= Nothing
+                  then unsafePerformIO $ openGeoDB memory_cache (fromJust x)
+                  else bringSafeGeoBD1
 
 progOptions :: [OptDescr (LogRevOptions -> IO LogRevOptions)]
 progOptions =
-  [ Option "i" ["input"] (ReqArg (\x o -> return o { inpFile = x }) "FILE") "input file"
-  , Option "o" ["output"] (ReqArg (\x o -> return o { outFile = x }) "FILE") "output file"
-  , Option "g" ["geo"] (ReqArg (\x o -> return o { geoFile = x,
-                                                   geoHdl = bringGeoDB x }) "FILE") "GeoIP database file"
-  , Option "v" ["verbose"] (NoArg (\o -> return o { optVerbose = True })) "verbose output"
-  , Option "V" ["version"] (NoArg (\_ -> hPutStrLn stderr progVersion
-                                         >> exitWith ExitSuccess)) "displays program version"
-  , Option "h" ["help"] (NoArg (\_ -> do prg <- getProgName
-                                         hPutStrLn stderr (usageInfo prg progOptions)
-                                         exitWith ExitSuccess)) "displays this message"
+  [ Option "i" ["input"]
+    (ReqArg (\x o -> return o { inpFile = x }) "FILE")
+    "input file"
+  , Option "o" ["output"]
+    (ReqArg (\x o -> return o { outFile = x }) "FILE")
+    "output file"
+  , Option "g" ["geo"]
+    (ReqArg (\x o -> return o { geoFile = x,
+                                geoHdl = bringGeoDB (Just x) }) "FILE")
+    "GeoIP database file"
+  , Option "v" ["verbose"]
+    (NoArg (\o -> return o { optVerbose = True }))
+    "verbose output"
+  , Option "V" ["version"]
+    (NoArg (\_ -> hPutStrLn stderr progVersion
+                  >> exitWith ExitSuccess))
+    "displays program version"
+  , Option "h" ["help"]
+    (NoArg (\_ -> do prg <- getProgName
+                     hPutStrLn stderr (usageInfo prg progOptions)
+                     >> exitWith ExitSuccess))
+    "displays this message"
   ]
 
 logRevMakeStringStat :: LogRevStatsAction -> String
@@ -131,7 +156,7 @@ processLogFileLoop :: [LogRevStatsAction] -> LogRevOptions -> Handle -> IO ()
 processLogFileLoop a o fh = do x <- hIsEOF fh
                                if x
                                   then putStrLn (S.join "\n" $ fmap logRevMakeStringStat a)
-                                       >> mapM_ (D.join (flip aPlot o)) a
+                                       >> mapM_ (D.join (`aPlot` o)) a
                                   else do ins <- hGetLine fh
                                           processLogFileLoop (procLineString o a ins) o fh
 
