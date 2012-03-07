@@ -17,14 +17,14 @@
 module Main (main) where
 
 
-import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Char8 as B()
+import qualified Data.GeoIP.GeoDB as G
 import qualified Data.Map as M
 import qualified Data.String.Utils as S
 import qualified Control.Monad as D
-import Data.Char
-import Data.Colour
-import Data.Colour.Names
-import Data.Geolocation.GeoIP
+import Data.Char()
+import Data.Colour()
+import Data.Colour.Names()
 import Data.List
 import Data.LogRev.LogStats
 import Data.LogRev.Parser
@@ -36,7 +36,7 @@ import System.Environment
 import System.Exit
 import System.IO
 import System.IO.Unsafe
-import System.Posix.Temp
+import System.Posix.Temp()
 import Text.Printf
 
 
@@ -71,25 +71,21 @@ startOptions = LogRevOptions {
   , optHelp     = False
   , inpFile     = "main.log"
   , outFile     = "report"
-  , geoHdl      = bringGeoDB Nothing
-  , geoFile     = "/usr/share/GeoIP/GeoLiteCity.dat"
+  , geoHdl      = bringGeoDB G.geoCountryDB
 }
 
+geoDBMainOptions :: G.GeoIPOption
+geoDBMainOptions = G.combineOptions [G.geoip_standard
+                                    , G.geoip_memory_cache
+                                    , G.geoip_mmap_cache]
 
-bringSafeGeoBD0 :: GeoDB
-bringSafeGeoBD0 = unsafePerformIO
-                  $ fromJust
-                  $ safeOpenGeoDBCity0 memory_cache
-
-bringSafeGeoBD1 :: GeoDB
-bringSafeGeoBD1 = unsafePerformIO
-                  $ fromJust
-                  $ safeOpenGeoDBCity0 memory_cache
-
-bringGeoDB :: Maybe String -> GeoDB
-bringGeoDB x = if x /= Nothing
-                  then unsafePerformIO $ openGeoDB memory_cache (fromJust x)
-                  else bringSafeGeoBD1
+bringGeoDB :: [G.GeoIPDBTypes] -> Maybe G.GeoDB
+bringGeoDB [] = Nothing
+bringGeoDB (x:xs) = if G.availableGeoDB x
+                       then Just
+                            $ unsafePerformIO
+                            $ G.openGeoDB x geoDBMainOptions
+                       else bringGeoDB xs
 
 progOptions :: [OptDescr (LogRevOptions -> IO LogRevOptions)]
 progOptions =
@@ -99,10 +95,6 @@ progOptions =
   , Option "o" ["output"]
     (ReqArg (\x o -> return o { outFile = x }) "FILE")
     "output file"
-  , Option "g" ["geo"]
-    (ReqArg (\x o -> return o { geoFile = x,
-                                geoHdl = bringGeoDB (Just x) }) "FILE")
-    "GeoIP database file"
   , Option "v" ["verbose"]
     (NoArg (\o -> return o { optVerbose = True }))
     "verbose output"

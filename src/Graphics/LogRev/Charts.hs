@@ -74,10 +74,7 @@ plotPngBarChart o l = renderableToPNGFile chart 800 600 fname
                                    $ plot_bars_item_styles ^= map mkstyle (cycle colorLocal)
                                    $ defaultPlotBars
                             btitle = ""
-                            hdr = aHeader l
-                            out = aOutput l
-                            sz = sSzTot out
-                            tot = sTot out
+                            (hdr, out, sz, tot) = (aHeader l, aOutput l, sSzTot out, sTot out) 
                             bstyle = Just (solidLine 1.0 $ C.opaque CN.black)
                             mkstyle c = (solidFillStyle c, bstyle)
                             alabels = sort $ M.keys (sSz out)

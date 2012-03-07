@@ -25,14 +25,20 @@ Source-repository head
 
 Executable logrev
   Main-is:		Main.hs
+  Extra-Libraries: GeoIP
   Hs-Source-Dirs:	src
+  Build-Tools:          hsc2hs
+  ghc-options:          -Wall
   Build-depends:
     Chart >= 0.15, Chart-gtk >= 0.15, MissingH >= 1.1.0.3,
     bytestring >= 0.9.1.10, colour >= 2.3.2, containers >= 0.4.0.0,
-    data-accessor >= 0.2.2.1, hs-GeoIP >= 0.1.1, parsec >= 3.1.1,
-    text >= 0.11.0.6, time >= 1.2.0.3, unix >= 2.4.2.0,
-    base >= 4 && <= 5
-  Other-modules:	Data.LogRev.LogStats
+    data-accessor >= 0.2.2.1, parsec >= 3.1.1, text >= 0.11.0.6,
+    time >= 1.2.0.3, unix >= 2.4.2.0, base >= 4 && <= 5,
+    bytestring >= 0.9, deepseq >= 1.1.0.2
+  Other-modules:        Data.GeoIP
+                        Data.GeoIP.GeoDB
+                        Data.LogRev.LogStats
                         Data.LogRev.Parser
                         Data.LogRev.Processing
                         Graphics.LogRev.Charts
+

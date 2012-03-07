@@ -32,7 +32,8 @@ module Data.LogRev.LogStats (
 
 
 import qualified Data.Map as M
-import Data.Geolocation.GeoIP
+import qualified Data.GeoIP.GeoDB as G
+
 import Graphics.Rendering.Chart
 import Graphics.Rendering.Chart.Gtk
 import Text.Printf
@@ -63,8 +64,7 @@ data LogRevOptions = LogRevOptions {
   , optHelp     :: Bool
   , inpFile     :: String
   , outFile     :: String
-  , geoFile     :: String
-  , geoHdl      :: GeoDB
+  , geoHdl      :: Maybe G.GeoDB
 }
 
 data LogRevStats = LogRevStats {

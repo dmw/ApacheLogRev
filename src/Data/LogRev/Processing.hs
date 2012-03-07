@@ -24,9 +24,9 @@ module Data.LogRev.Processing (
 
 
 import qualified Data.ByteString.Char8 as B
+import qualified Data.GeoIP.GeoDB as G
 import qualified Data.String.Utils as S
 import qualified Data.Map as M
-import Data.Geolocation.GeoIP
 import Data.LogRev.LogStats
 import Data.Maybe
 
@@ -69,9 +69,9 @@ statsHandlerBytes o s l = r
 
 geoLookupAddr :: LogRevOptions -> String -> String
 geoLookupAddr o s = B.unpack r
-                    where g = geoHdl o
-                          a = geoLocateByIPAddress g (B.pack s)
-                          r = geoCountryCode3 $ fromJust a
+                    where g = fromJust $ geoHdl o
+                          a = G.geoLocateByIPAddress g (B.pack s)
+                          r = G.geoCountryCode3 $ fromJust a
 
 getReqSz :: LogLine -> Int
 getReqSz l = read $ S.strip $ getBytes l
