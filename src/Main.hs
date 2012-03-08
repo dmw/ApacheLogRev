@@ -17,11 +17,12 @@
 module Main (main) where
 
 
+import qualified Control.Monad as D
 import qualified Data.ByteString.Char8 as B()
 import qualified Data.GeoIP.GeoDB as G
 import qualified Data.Map as M
 import qualified Data.String.Utils as S
-import qualified Control.Monad as D
+
 import Data.Char()
 import Data.Colour()
 import Data.Colour.Names()
@@ -35,7 +36,7 @@ import System.Console.GetOpt
 import System.Environment
 import System.Exit
 import System.IO
-import System.IO.Unsafe
+import System.IO.Unsafe()
 import System.Posix.Temp()
 import Text.Printf
 
@@ -71,21 +72,11 @@ startOptions = LogRevOptions {
   , optHelp     = False
   , inpFile     = "main.log"
   , outFile     = "report"
-  , geoHdl      = bringGeoDB G.geoCountryDB
+  , geoHdl      = let geo = G.bringGeoCityDB
+                      in if geo /= Nothing
+                            then geo
+                         else G.bringGeoCountryDB
 }
-
-geoDBMainOptions :: G.GeoIPOption
-geoDBMainOptions = G.combineOptions [G.geoip_standard
-                                    , G.geoip_memory_cache
-                                    , G.geoip_mmap_cache]
-
-bringGeoDB :: [G.GeoIPDBTypes] -> Maybe G.GeoDB
-bringGeoDB [] = Nothing
-bringGeoDB (x:xs) = if G.availableGeoDB x
-                       then Just
-                            $ unsafePerformIO
-                            $ G.openGeoDB x geoDBMainOptions
-                       else bringGeoDB xs
 
 progOptions :: [OptDescr (LogRevOptions -> IO LogRevOptions)]
 progOptions =

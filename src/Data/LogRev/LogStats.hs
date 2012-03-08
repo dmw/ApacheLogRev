@@ -15,15 +15,13 @@
 
 
 module Data.LogRev.LogStats (
-  StringIntMap(..)
-
-  , StringDoubleMap(..)
-  , LogRevStatsCol(..)
+  StringIntMap
+  , StringDoubleMap
+  , LogRevStatsCol
   , LogLine(..)
   , LogRevOptions(..)
   , LogRevStats(..)
   , LogRevStatsAction(..)
-
   , addIntMapEntry
   , addPIntMapEntry
   , addFltMapEntry
@@ -35,7 +33,7 @@ import qualified Data.Map as M
 import qualified Data.GeoIP.GeoDB as G
 
 import Graphics.Rendering.Chart
-import Graphics.Rendering.Chart.Gtk
+import Graphics.Rendering.Chart.Gtk()
 import Text.Printf
 
 

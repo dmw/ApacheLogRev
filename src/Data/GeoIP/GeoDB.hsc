@@ -6,55 +6,17 @@
 module Data.GeoIP.GeoDB (
   -- * Types
   GeoDB
-  , GeoIPOption
-  , GeoIPDBTypes
-  , combineOptions
-  , geoip_standard
-  , geoip_memory_cache
-  , geoip_check_cache
-  , geoip_index_cache
-  , geoip_mmap_cache
-    -- * Database Types
-  , geoip_country_edition
-  , geoip_region_edition_rev0
-  , geoip_city_edition_rev0
-  , geoip_org_edition
-  , geoip_isp_edition
-  , geoip_city_edition_rev1
-  , geoip_region_edition_rev1
-  , geoip_proxy_edition
-  , geoip_asnum_edition
-  , geoip_netspeed_edition
-  , geoip_domain_edition
-  , geoip_country_edition_v6
-  , geoip_locationa_edition
-  , geoip_accuracyradius_edition
-  , geoip_cityconfidence_edition
-  , geoip_cityconfidencedist_edition
-  , geoip_large_country_edition
-  , geoip_large_country_edition_v6
-  , geoip_cityconfidencedist_isp_org_edition
-  , geoip_ccm_country_edition
-  , geoip_asnum_edition_v6
-  , geoip_isp_edition_v6
-  , geoip_org_edition_v6
-  , geoip_domain_edition_v6
-  , geoip_locationa_edition_v6
-  , geoip_registrar_edition
-  , geoip_registrar_edition_v6
-  , geoip_usertype_edition
-  , geoip_usertype_edition_v6
-  , geoip_city_edition_rev1_v6
-  , geoip_city_edition_rev0_v6
-  , geoip_netspeed_edition_rev1
-  , geoip_netspeed_edition_rev1_v6
-  , geoip_notfound_database
-    -- * Geolocation Result Type
+  , GeoIPOption(..)
+  , GeoIPDBTypes(..)
   , GeoIPRecord(..)
+  , geoCountryDB
     -- * Data Operations
+  , combineOptions
   , availableGeoDB
   , openGeoDB
-  , geoCountryDB
+  , bringGeoDB
+  , bringGeoCityDB
+  , bringGeoCountryDB
   , geoLocateByIPAddress
   , geoLocateByIPNum
   , mkIpNum
@@ -69,7 +31,7 @@ import Data.ByteString.Char8 (ByteString,
                               split,
                               unpack)
 
-import Foreign.C.String
+import Foreign.C.String()
 import Foreign.C.Types
 import Foreign.Ptr
 import Foreign
@@ -77,6 +39,7 @@ import Foreign
 
 #include "GeoIP.h"
 #include "GeoIPCity.h"
+
 
 data GeoIP
 
@@ -200,11 +163,47 @@ geoCountryDB = [geoip_city_edition_rev1_v6
                , geoip_country_edition]
 
 
+geoCityDB :: [GeoIPDBTypes]
+geoCityDB = [geoip_city_edition_rev1_v6
+            , geoip_city_edition_rev0_v6
+            , geoip_city_edition_rev1
+            , geoip_city_edition_rev0]
+
+
 ------------------------------------------------------------------------------
 -- | Collapse & combine multiple 'GeoIPOption's into one
 combineOptions :: [GeoIPOption] -> GeoIPOption
 combineOptions = GeoIPOption . foldr ((.|.) . unGeoIPOpt) 0
 
+
+------------------------------------------------------------------------------
+-- | Standard options for common operating systems
+geoDBMainOptions :: GeoIPOption
+geoDBMainOptions = combineOptions [geoip_standard
+                                  , geoip_memory_cache
+                                  , geoip_mmap_cache]
+
+
+------------------------------------------------------------------------------
+-- | Returns the first available database for the system wide Country Editions
+bringGeoCountryDB :: Maybe GeoDB
+bringGeoCountryDB = bringGeoDB geoCountryDB
+
+------------------------------------------------------------------------------
+-- | Returns the first available database for the system wide Country Editions
+bringGeoCityDB :: Maybe GeoDB
+bringGeoCityDB = bringGeoDB geoCityDB
+
+------------------------------------------------------------------------------
+-- | Returns the first available database for the given list of types.
+
+bringGeoDB :: [GeoIPDBTypes] -> Maybe GeoDB
+bringGeoDB [] = Nothing
+bringGeoDB (x:xs) = if availableGeoDB x
+                       then Just
+                            $ unsafePerformIO
+                            $ openGeoDB x geoDBMainOptions
+                       else bringGeoDB xs
 
 ------------------------------------------------------------------------------
 -- Utils
@@ -301,3 +300,4 @@ foreign import ccall safe "GeoIPCity.h GeoIP_db_avail"
 
 foreign import ccall safe "GeoIPCity.h GeoIP_open_type"
   c_GeoIP_open_type :: GeoIPDBTypes -> GeoIPOption -> IO (Ptr GeoIP)
+
