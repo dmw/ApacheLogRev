@@ -54,7 +54,7 @@ data LogLine = LogLine {
   , getBytes    :: String
   , getRef      :: String
   , getUA       :: String
-} deriving (Ord, Show, Eq)
+} deriving (Show, Eq)
 
 data LogRevOptions = LogRevOptions {
   optVerbose    :: Bool
@@ -86,16 +86,18 @@ data LogRevStatsAction = LogRevStatsAction {
 }
 
 instance Show LogRevStats where
-  show a = printf " %d " (sTot a)
+  show a = printf " %d " tot
+           where tot = sTot a
 
 instance Show LogRevStatsAction where
-  show a = printf " (%s:%s) " (aHeader a) (show (aOutput a))
-
+  show a = printf " (%s:%s) " hdr out
+           where hdr = aHeader a
+                 out = show $! aOutput a
 
 addIntMapEntry :: String -> StringIntMap -> StringIntMap
 addIntMapEntry loc m = if M.member loc m
                           then M.insert loc ((m M.! loc) + 1) m
-                          else M.insert loc 1 m
+                       else M.insert loc 1 m
 
 addPIntMapEntry :: String
                    -> Int
@@ -103,12 +105,12 @@ addPIntMapEntry :: String
                    -> StringIntMap
 addPIntMapEntry loc v m = if M.member loc m
                              then M.insert loc ((m M.! loc) + v) m
-                             else M.insert loc 1 m
+                          else M.insert loc 1 m
 
 addFltMapEntry :: String -> StringDoubleMap -> StringDoubleMap
 addFltMapEntry loc m = if M.member loc m
                           then M.insert loc ((m M.! loc) + 1.0) m
-                          else M.insert loc 1 m
+                       else M.insert loc 1 m
 
 addPFltMapEntry :: String
                    -> Double
@@ -116,4 +118,4 @@ addPFltMapEntry :: String
                    -> StringDoubleMap
 addPFltMapEntry loc v m = if M.member loc m
                              then M.insert loc ((m M.! loc) + v) m
-                             else M.insert loc 1 m
+                          else M.insert loc 1 m

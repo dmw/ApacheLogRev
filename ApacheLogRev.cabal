@@ -28,7 +28,7 @@ Executable logrev
   Extra-Libraries: GeoIP
   Hs-Source-Dirs:	src
   Build-Tools:          hsc2hs
-  ghc-options:          -Wall
+  ghc-options:          -O2
   Build-depends:
     Chart >= 0.15, Chart-gtk >= 0.15, MissingH >= 1.1.0.3,
     bytestring >= 0.9.1.10, colour >= 2.3.2, containers >= 0.4.0.0,
@@ -41,4 +41,5 @@ Executable logrev
                         Data.LogRev.Parser
                         Data.LogRev.Processing
                         Graphics.LogRev.Charts
+-- ghc-options:         -Wall -rtsopts -auto -auto-all -caf-all -debug -fobject-code -prof
 

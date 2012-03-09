@@ -19,11 +19,11 @@ module Main (main) where
 
 import qualified Control.Monad as D
 import qualified Data.ByteString.Char8 as B()
-import qualified Data.GeoIP.GeoDB as G
 import qualified Data.Map as M
 import qualified Data.String.Utils as S
 
 import Data.Char()
+import Data.GeoIP.GeoDB
 import Data.Colour()
 import Data.Colour.Names()
 import Data.List
@@ -72,11 +72,15 @@ startOptions = LogRevOptions {
   , optHelp     = False
   , inpFile     = "main.log"
   , outFile     = "report"
-  , geoHdl      = let geo = G.bringGeoCityDB
-                      in if geo /= Nothing
-                            then geo
-                         else G.bringGeoCountryDB
+  , geoHdl      = safeGeoDB
 }
+
+
+safeGeoDB :: Maybe GeoDB
+safeGeoDB = let geo = bringGeoCityDB
+                in if geo /= Nothing
+                      then geo
+                      else bringGeoCountryDB
 
 progOptions :: [OptDescr (LogRevOptions -> IO LogRevOptions)]
 progOptions =
@@ -116,32 +120,29 @@ applyAction :: LogRevOptions
                -> LogRevStatsAction
                -> LogLine
                -> LogRevStatsAction
-applyAction o a l = let action = aAction a
-                        output = aOutput a
-                        in a { aOutput = action o output l }
+applyAction o a l = a { aOutput = (aAction a) o (aOutput a) l }
 
 procLogMachine :: LogRevOptions
                   -> [LogRevStatsAction]
-                  -> LogLine
+                  -> Maybe LogLine
                   -> [LogRevStatsAction]
-procLogMachine o m l = fmap (flip (applyAction o) l) m
+procLogMachine o m l = if l /= Nothing
+                          then fmap (flip (applyAction o) (fromJust l)) m
+                       else m
 
-procLineString :: LogRevOptions
-                  -> [LogRevStatsAction]
-                  -> String
-                  -> [LogRevStatsAction]
-procLineString m s x = let r = parseLogLine x
-                           in if r /= Nothing
-                                 then procLogMachine m s (fromJust r)
-                                 else s
+foldLogLines :: [LogRevStatsAction]
+                -> LogRevOptions
+                -> [String]
+                -> [LogRevStatsAction]
+foldLogLines [] _ [] = []
+foldLogLines ms _ [] = ms
+foldLogLines ms o (x:xs) = let lm = parseLogLine x
+                               ns = seq lm $ procLogMachine o ms lm
+                               in foldLogLines ns o xs
 
-processLogFileLoop :: [LogRevStatsAction] -> LogRevOptions -> Handle -> IO ()
-processLogFileLoop a o fh = do x <- hIsEOF fh
-                               if x
-                                  then putStrLn (S.join "\n" $ fmap logRevMakeStringStat a)
-                                       >> mapM_ (D.join (`aPlot` o)) a
-                                  else do ins <- hGetLine fh
-                                          processLogFileLoop (procLineString o a ins) o fh
+procResults :: [LogRevStatsAction] -> LogRevOptions -> IO ()
+procResults xs o = putStrLn (S.join "\n" $ fmap logRevMakeStringStat xs)
+                   >> mapM_ (D.join (`aPlot` o)) xs
 
 handlerIOError :: IOError -> IO ()
 handlerIOError e = putStrLn (printf "IOError: %s" $ show e)
@@ -149,7 +150,8 @@ handlerIOError e = putStrLn (printf "IOError: %s" $ show e)
 
 readLogFile :: [LogRevStatsAction] -> LogRevOptions -> IO ()
 readLogFile a o = do fh <- openFile (inpFile o) ReadMode
-                     processLogFileLoop a o fh
+                     cont <- hGetContents fh
+                     procResults (foldLogLines a o (lines cont)) o
                      hClose fh
 
 processArgs :: IO ()

@@ -8,17 +8,15 @@ module Data.GeoIP.GeoDB (
   GeoDB
   , GeoIPOption(..)
   , GeoIPDBTypes(..)
-  , GeoIPRecord(..)
+  , GeoIPRec(..)
   , geoCountryDB
     -- * Data Operations
   , combineOptions
   , availableGeoDB
-  , openGeoDB
   , bringGeoDB
   , bringGeoCityDB
   , bringGeoCountryDB
   , geoLocateByIPAddress
-  , geoLocateByIPNum
   , mkIpNum
   ) where
 
@@ -29,7 +27,10 @@ import Control.Applicative
 import Data.ByteString.Char8 (ByteString,
                               packCString,
                               split,
-                              unpack)
+                              unpack,
+                              pack)
+
+import Data.Maybe
 
 import Foreign.C.String()
 import Foreign.C.Types
@@ -51,7 +52,7 @@ newtype GeoDB = GeoDB {
 
 
 ------------------------------------------------------------------------------
--- | Return data for a geolocation lookup
+-- | Return data for a geolocation lookup (this should not be used)
 data GeoIPRecord = GeoIPRecord
   { geoCountryCode    :: !ByteString
   , geoCountryCode3   :: !ByteString
@@ -64,6 +65,22 @@ data GeoIPRecord = GeoIPRecord
   , geoAreaCode       :: !Int
   , geoContinentCode  :: !ByteString
   , geoAccuracyRadius :: !Int
+  } deriving (Eq, Show)
+
+------------------------------------------------------------------------------
+-- | Return data for a geolocation lookup (this entry is public)
+data GeoIPRec = GeoIPRec
+  { countryCode       :: !String
+  , countryCode3      :: !String
+  , countryName       :: !String
+  , region            :: !String
+  , city              :: !String
+  , postalCode        :: !String
+  , latitude          :: !Double
+  , longitude         :: !Double
+  , areaCode          :: !Int
+  , continentCode     :: !String
+  , accuracyRadius    :: !Int
   } deriving (Eq, Show)
 
 
@@ -201,8 +218,8 @@ bringGeoDB :: [GeoIPDBTypes] -> Maybe GeoDB
 bringGeoDB [] = Nothing
 bringGeoDB (x:xs) = if availableGeoDB x
                        then Just
-                            $ unsafePerformIO
-                            $ openGeoDB x geoDBMainOptions
+                            $! unsafePerformIO
+                            $! openGeoDB x geoDBMainOptions
                        else bringGeoDB xs
 
 ------------------------------------------------------------------------------
@@ -214,7 +231,7 @@ bringGeoDB (x:xs) = if availableGeoDB x
 mkIpNum :: ByteString -> Maybe Integer
 mkIpNum x = case valid of
   False -> Nothing
-  True -> Just $ a * 16777216 + b * 65536 + 256 * c + d
+  True -> Just $! a * 16777216 + b * 65536 + 256 * c + d
   where
     valid = length parts == 4 && foldr (\r acc -> acc && r <= 255) True [a,b,c,d]
     a : b : c : d : _ = map (read . unpack) parts
@@ -256,9 +273,34 @@ openGeoDB t o = do x <- c_GeoIP_open_type t o
 -- | Geo-locate by given IP Adress
 --
 -- > geoLocateByIPAddress db "123.123.123.123"
-geoLocateByIPAddress :: GeoDB -> ByteString -> Maybe GeoIPRecord
-geoLocateByIPAddress db ip = mkIpNum ip >>= geoLocateByIPNum db
+geoLocateByIPAddress :: GeoDB -> ByteString -> Maybe GeoIPRec
+geoLocateByIPAddress db ip = seq r $! toIPRec r
+                             where r = mkIpNum ip >>= geoLocateByIPNum db
 
+
+------------------------------------------------------------------------------
+-- | Converts a GeoIPRecord entry to GeoIPRec entry.
+--
+--
+-- > toIPRec r
+toIPRec :: Maybe GeoIPRecord -> Maybe GeoIPRec
+toIPRec r = case r of
+                 Nothing -> Nothing
+                 _       -> nr
+                            where nr = Just $ GeoIPRec {
+                                    countryCode = unpack (geoCountryCode jr)
+                                    , countryCode3 = unpack (geoCountryCode3 jr)
+                                    , countryName = unpack (geoCountryName jr)
+                                    , region = unpack (geoRegion jr)
+                                    , city = unpack (geoCity jr)
+                                    , postalCode = unpack (geoPostalCode jr)
+                                    , latitude = geoLatitude jr
+                                    , longitude = geoLongitude jr
+                                    , areaCode = geoAreaCode jr
+                                    , continentCode = unpack (geoContinentCode jr)
+                                    , accuracyRadius = geoAccuracyRadius jr
+                                    }
+                                  jr = fromJust r
 
 ------------------------------------------------------------------------------
 -- | Geo-locate by given IP number. Call 'mkIpNum' on a 'String' ip address to
@@ -266,11 +308,11 @@ geoLocateByIPAddress db ip = mkIpNum ip >>= geoLocateByIPNum db
 --
 -- > geoLocateByIPNum db 12336939327338
 geoLocateByIPNum :: GeoDB -> Integer -> Maybe GeoIPRecord
-geoLocateByIPNum (GeoDB db) ip = unsafePerformIO $ do
-  withForeignPtr db $ \db' -> do
+geoLocateByIPNum (GeoDB db) ip = unsafePerformIO $! do
+  withForeignPtr db $! \db' -> do
     ptr <- c_GeoIP_record_by_ipnum db' (fromIntegral ip)
     rec <- peekGeoIPRecord ptr
-    return $ rec `deepseq` ()
+    return $! rec `deepseq` ()
     case ptr == nullPtr of
       True -> return ()
       False -> c_GeoIPRecord_delete ptr
