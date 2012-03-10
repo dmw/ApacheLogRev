@@ -26,10 +26,37 @@ module Data.LogRev.Parser (
 
 import Data.LogRev.LogStats
 import Text.ParserCombinators.Parsec
+import Text.Printf
 
+validNumberChars :: String
+validNumberChars = ['0' .. '9']
+
+validVHostChars :: String
+validVHostChars = ['0' .. '9']
+                   ++ ['a' .. 'z']
+                   ++ ['A' .. 'Z']
+                   ++ ['.', '-', '_', ':']
 
 plainValue :: Parser String
 plainValue = many1 (noneOf " \n")
+
+parseInteger :: GenParser Char st Int
+parseInteger = do x <- many $ oneOf validNumberChars
+                  return (read x)
+
+parseVHost :: GenParser Char st String
+parseVHost = do vh <- many $ oneOf validVHostChars
+                return (vh)
+
+parseIP :: GenParser Char st String
+parseIP = do o1 <- many $ oneOf validNumberChars
+             _  <- char '.'
+             o2 <- many $ oneOf validNumberChars
+             _  <- char '.'
+             o3 <- many $ oneOf validNumberChars
+             _  <- char '.'
+             o4 <- many $ oneOf validNumberChars
+             return (printf "%s.%s.%s.%s" o1 o2 o3 o4)
 
 bracketedValue :: Parser String
 bracketedValue = do
@@ -50,11 +77,11 @@ dashChar = do
   x <- char '-'
   return (show x)
 
-logLine :: Parser LogLine
-logLine = do
-  vhost <- plainValue
+logLineVHost :: Parser LogLine
+logLineVHost = do
+  vhost <- parseVHost
   _ <- space
-  ip <- plainValue
+  ip <- parseIP
   _ <- space
   ident <- plainValue
   _ <- space
@@ -71,7 +98,54 @@ logLine = do
   ref <- dashChar <|> quotedValue
   _ <- space
   ua <- dashChar <|> quotedValue
-  return $ LogLine vhost ip ident user date req status bytes ref ua
+  return $ LogLine {
+    getVhost  = vhost
+    , getIP     = ip
+    , getIdent  = ident
+    , getUser   = user
+    , getDate   = date
+    , getReq    = req
+    , getStatus = status
+    , getBytes  = bytes
+    , getRef    = ref
+    , getUA     = ua
+    }
+
+logLineBasic :: Parser LogLine
+logLineBasic = do
+  ip <- parseIP
+  _ <- space
+  ident <- plainValue
+  _ <- space
+  user <- plainValue
+  _ <- space
+  date <- bracketedValue
+  _ <- space
+  req <- quotedValue
+  _ <- space
+  status <- plainValue
+  _ <- space
+  bytes <- plainValue
+  _ <- space
+  ref <- dashChar <|> quotedValue
+  _ <- space
+  ua <- dashChar <|> quotedValue
+  return $ LogLine {
+    getVhost    = ""
+    , getIP     = ip
+    , getIdent  = ident
+    , getUser   = user
+    , getDate   = date
+    , getReq    = req
+    , getStatus = status
+    , getBytes  = bytes
+    , getRef    = ref
+    , getUA     = ua
+    }
+
+logLine :: Parser LogLine
+logLine = do logLineBasic
+             <|> logLineVHost
 
 parseLogLine :: String -> Maybe LogLine
 parseLogLine s = let r = parse logLine "[Invalid]" s

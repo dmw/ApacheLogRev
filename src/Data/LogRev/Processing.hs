@@ -81,5 +81,5 @@ geoLookupAddr o s = G.countryCode3 $! fromJust a
                               $! B.pack s
 
 getReqSz :: LogLine -> Int
-getReqSz l = (read . S.strip) (getBytes l)
+getReqSz l = (read . S.strip) $ getBytes l
 
