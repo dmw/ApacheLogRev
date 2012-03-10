@@ -33,7 +33,7 @@ import Data.LogRev.LogStats
 import Data.String.Utils
 import qualified Data.Map as M
 import Graphics.Rendering.Chart
-import Graphics.Rendering.Chart.Gtk
+import Graphics.Rendering.Chart.Gtk()
 import Text.Printf
 
 
@@ -50,10 +50,10 @@ plotPngPieChart o l = renderableToPNGFile chart 800 600 fname
                                      $ pie_plot ^: pie_colors ^= colorLocal
                                      $ pie_plot ^: pie_data ^= map pitem values
                                      $ defaultPieLayout
-                            values = getActionValuesPie o l
-                            pitem (s, v, o) = defaultPieItem { pitem_value_ = v
+                            values = getActionValuesPie l
+                            pitem (s, v, m) = defaultPieItem { pitem_value_ = v
                                                              , pitem_label_ = s
-                                                             , pitem_offset_= 5.0
+                                                             , pitem_offset_= m
                                                              }
                             fname = buildFileName o l
                             title = printf "Apache %s" $ aHeader l
@@ -73,12 +73,11 @@ plotPngBarChart o l = renderableToPNGFile chart 800 600 fname
                                    $ plot_bars_spacing ^= BarsFixGap 10.0 10.0
                                    $ plot_bars_item_styles ^= map mkstyle (cycle colorLocal)
                                    $ defaultPlotBars
-                            btitle = ""
                             (hdr, out, sz, tot) = (aHeader l, aOutput l, sSzTot out, sTot out)
                             bstyle = Just (solidLine 1.0 $ C.opaque CN.black)
-                            mkstyle c = (solidFillStyle c, bstyle)
+                            mkstyle cxs = (solidFillStyle cxs, bstyle)
                             alabels = sort $ M.keys (sSz out)
-                            values = getActionValuesBar o l
+                            values = getActionValuesBar l
                             fname = buildFileName o l
                             lstyle = legend_orientation ^= LORows 3 $ defaultLegendStyle
                             title_q = printf "Apache %s Hit%% | %d (count)" hdr tot
@@ -109,14 +108,14 @@ logRevSzPer a k = 100.0 * n / t
                         m = sSz o
                         n = fromIntegral $ m M.! k
 
-getActionValuesPie :: LogRevOptions -> LogRevStatsAction -> [(String, Double, Double)]
-getActionValuesPie o l = fmap (buildTuple l) kxs
-                         where kxs = sort $ M.keys (sMap (aOutput l))
-                               buildTuple u v = let x = logRevCntPer u v
-                                                    y = buildLabel v x
-                                                    in (y, x, 0.5)
+getActionValuesPie :: LogRevStatsAction -> [(String, Double, Double)]
+getActionValuesPie l = fmap (buildTuple l) kxs
+                       where kxs = sort $ M.keys (sMap (aOutput l))
+                             buildTuple u v = let x = logRevCntPer u v
+                                                  y = buildLabel v x
+                                                  in (y, x, 0.5)
 
-getActionValuesBar :: LogRevOptions -> LogRevStatsAction -> [[Double]]
-getActionValuesBar o l = fmap (buildValue l) kxs
-                         where kxs = sort $ M.keys (sMap (aOutput l))
-                               buildValue u v = [logRevCntPer u v, logRevSzPer u v]
+getActionValuesBar :: LogRevStatsAction -> [[Double]]
+getActionValuesBar l = fmap (buildValue l) kxs
+                       where kxs = sort $ M.keys (sMap (aOutput l))
+                             buildValue u v = [logRevCntPer u v, logRevSzPer u v]

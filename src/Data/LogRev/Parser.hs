@@ -33,16 +33,16 @@ plainValue = many1 (noneOf " \n")
 
 bracketedValue :: Parser String
 bracketedValue = do
-  char '['
+  _ <- char '['
   content <- many (noneOf "]")
-  char ']'
+  _ <- char ']'
   return content
 
 quotedValue :: Parser String
 quotedValue = do
-  char '"'
+  _ <- char '"'
   content <- many (noneOf "\"")
-  char '"'
+  _ <- char '"'
   return content
 
 dashChar :: Parser String
@@ -53,28 +53,28 @@ dashChar = do
 logLine :: Parser LogLine
 logLine = do
   vhost <- plainValue
-  space
+  _ <- space
   ip <- plainValue
-  space
+  _ <- space
   ident <- plainValue
-  space
+  _ <- space
   user <- plainValue
-  space
+  _ <- space
   date <- bracketedValue
-  space
+  _ <- space
   req <- quotedValue
-  space
+  _ <- space
   status <- plainValue
-  space
+  _ <- space
   bytes <- plainValue
-  space
+  _ <- space
   ref <- dashChar <|> quotedValue
-  space
+  _ <- space
   ua <- dashChar <|> quotedValue
   return $ LogLine vhost ip ident user date req status bytes ref ua
 
 parseLogLine :: String -> Maybe LogLine
 parseLogLine s = let r = parse logLine "[Invalid]" s
                      in case r of
-                             Left perr -> Nothing
+                             Left  _   -> Nothing
                              Right itm -> itm `seq` Just itm

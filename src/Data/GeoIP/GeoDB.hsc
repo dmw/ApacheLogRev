@@ -27,8 +27,7 @@ import Control.Applicative
 import Data.ByteString.Char8 (ByteString,
                               packCString,
                               split,
-                              unpack,
-                              pack)
+                              unpack)
 
 import Data.Maybe
 
