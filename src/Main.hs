@@ -53,13 +53,13 @@ emptyLogRevStats = LogRevStats { sTot   = 0
 
 actionMap :: [LogRevStatsAction]
 actionMap = [LogRevStatsAction {
-                aHeader   = "Status"
+                aHeader   = "HTTP Status"
                 , aAction = statsHandlerStatus
                 , aOutput = emptyLogRevStats
                 , aPlot   = plotPngBarChart
                 },
              LogRevStatsAction {
-                aHeader = "Country"
+                aHeader   = "Connections From Countries"
                 , aAction = statsHandlerCountry
                 , aOutput = emptyLogRevStats
                 , aPlot   = plotPngBarChart
@@ -120,14 +120,14 @@ applyAction :: LogRevOptions
                -> LogRevStatsAction
                -> LogLine
                -> LogRevStatsAction
-applyAction o a l = a { aOutput = (aAction a) o (aOutput a) l }
+applyAction o a l = a { aOutput = aAction a o (aOutput a) l }
 
 procLogMachine :: LogRevOptions
                   -> [LogRevStatsAction]
                   -> Maybe LogLine
                   -> [LogRevStatsAction]
 procLogMachine o m l = if l /= Nothing
-                          then fmap (flip (applyAction o) (fromJust l)) m
+                          then fmap (flip (applyAction o) $ fromJust l) m
                        else m
 
 foldLogLines :: [LogRevStatsAction]
@@ -136,8 +136,10 @@ foldLogLines :: [LogRevStatsAction]
                 -> [LogRevStatsAction]
 foldLogLines [] _ [] = []
 foldLogLines ms _ [] = ms
-foldLogLines ms o (x:xs) = let lm = parseLogLine x
-                               ns = seq lm $ procLogMachine o ms lm
+foldLogLines ms o (x:xs) = let lm :: Maybe LogLine
+                               ns :: [LogRevStatsAction]
+                               lm = x `seq` parseLogLine x
+                               ns = lm `seq` o `seq` procLogMachine o ms lm
                                in foldLogLines ns o xs
 
 procResults :: [LogRevStatsAction] -> LogRevOptions -> IO ()
@@ -151,7 +153,7 @@ handlerIOError e = putStrLn (printf "IOError: %s" $ show e)
 readLogFile :: [LogRevStatsAction] -> LogRevOptions -> IO ()
 readLogFile a o = do fh <- openFile (inpFile o) ReadMode
                      cont <- hGetContents fh
-                     procResults (foldLogLines a o (lines cont)) o
+                     procResults (foldLogLines a o $ lines cont) o
                      hClose fh
 
 processArgs :: IO ()

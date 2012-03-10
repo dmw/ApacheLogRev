@@ -31,6 +31,12 @@ import Data.LogRev.LogStats
 import Data.Maybe
 
 
+coreStatsArgs :: LogRevStats -> LogLine -> (StringIntMap, Int, StringIntMap)
+coreStatsArgs s l = (ssm, req, szz)
+                    where ssm = seq s $ sMap s
+                          req = seq l $ getReqSz l
+                          szz = seq s $ sSz s
+
 statsHandlerStatus :: LogRevOptions -> LogRevStats -> LogLine -> LogRevStats
 statsHandlerStatus o s l = r
                            where r = s { sMap   = x
@@ -41,9 +47,7 @@ statsHandlerStatus o s l = r
                                  x = addIntMapEntry t ssm
                                  z = addPIntMapEntry t req szz
                                  t = seq l $ getStatus l
-                                 ssm = seq s $ sMap s
-                                 req = seq l $ getReqSz l
-                                 szz = seq s $ sSz s
+                                 (ssm, req, szz) = coreStatsArgs s l
 
 statsHandlerCountry :: LogRevOptions -> LogRevStats -> LogLine -> LogRevStats
 statsHandlerCountry o s l = r
@@ -56,9 +60,7 @@ statsHandlerCountry o s l = r
                                   x = addIntMapEntry y ssm
                                   z = addPIntMapEntry y req szz
                                   i = seq l $ getIP l
-                                  ssm = seq s $ sMap s
-                                  req = seq l $ getReqSz l
-                                  szz = seq s $ sSz s
+                                  (ssm, req, szz) = coreStatsArgs s l
 
 statsHandlerBytes :: LogRevOptions -> LogRevStats -> LogLine -> LogRevStats
 statsHandlerBytes o s l = r
@@ -68,11 +70,9 @@ statsHandlerBytes o s l = r
                                       , sSzTot = sSzTot s + getReqSz l
                                       }
                                 y = seq l $ getBytes l
-                                x = addIntMapEntry y $ ssm
+                                x = addIntMapEntry y ssm
                                 z = addPIntMapEntry y req szz
-                                ssm = seq s $ sMap s
-                                req = seq l $ getReqSz l
-                                szz = seq s $ sSz s
+                                (ssm, req, szz) = coreStatsArgs s l
 
 geoLookupAddr :: LogRevOptions -> String -> String
 geoLookupAddr o s = G.countryCode3 $! fromJust a

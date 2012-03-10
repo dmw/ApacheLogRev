@@ -74,7 +74,7 @@ logLine = do
   return $ LogLine vhost ip ident user date req status bytes ref ua
 
 parseLogLine :: String -> Maybe LogLine
-parseLogLine s = let !r = parse logLine "[Invalid]" s
+parseLogLine s = let r = parse logLine "[Invalid]" s
                      in case r of
                              Left perr -> Nothing
-                             Right itm -> Just itm
+                             Right itm -> itm `seq` Just itm
