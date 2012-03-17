@@ -20,9 +20,9 @@ module Proc.LRS.Parser (
   ) where
 
 
-import Data.Maybe
+import Data.Maybe ()
 import Text.ParserCombinators.Parsec
-import Text.Printf
+import Text.Printf ()
 
 data LRSType = LRSBuiltIn
              | LRSCustom
@@ -102,12 +102,9 @@ textValue = many (noneOf "\r\n$#><[]\"")
 singleQuoteValue :: Parser String
 singleQuoteValue = many (noneOf "\'")
 
-doubleQuoteValue :: Parser String
-doubleQuoteValue = many (noneOf "\"")
-
 parseSection :: String -> Parser String
 parseSection s = do
-  string s
+  _ <- string s
   _ <- spaces
   res <- identifierValue
   _ <- readEol
@@ -122,11 +119,11 @@ parseSectionText s = do
 
 logSpecHeader :: Parser LRS
 logSpecHeader = do
-  specId <- parseSection "log-spec:"
+  i <- parseSection "log-spec:"
   _ <- spaces
-  specTitle <- parseSectionText "log-title:"
-  return LRS { specId      = specId
-             , specTitle   = specTitle
+  t <- parseSectionText "log-title:"
+  return LRS { specId      = i
+             , specTitle   = t
              , specRules   = []
              , specTokens  = []
              , specReport  = []
@@ -145,25 +142,25 @@ parseParam = do
 
 parseBuiltIn :: Parser LRSType
 parseBuiltIn = do
-  string ":built-in:"
+  _ <- string ":built-in:"
   return LRSBuiltIn
 
 parseCustom :: Parser LRSType
 parseCustom = do
-  string ":custom:"
+  _ <- string ":custom:"
   return LRSCustom
 
 logRuleParserParam :: Parser LRSRule
 logRuleParserParam = do
   _ <- spaces
-  ruleId <- parseSection "log-rule:"
+  ri <- parseSection "log-rule:"
   _ <- spaces >> string "log-is:" >> spaces
   lt <- (parseBuiltIn <|> parseCustom)
   pr <- identifierValue
   _ <- spaces
   pm <- many parseParam
   _ <- spaces >> string ":end-rule:" >> readEol
-  return LRSRule { ruleId     = ruleId
+  return LRSRule { ruleId     = ri
                  , ruleSpec   = lt
                  , ruleProc   = pr
                  , ruleParams = pm
@@ -179,9 +176,9 @@ logTokenParser = do
 logTokenizerParser :: Parser [String]
 logTokenizerParser = do
   _ <- string "log-tokenize:"
-  tokens <- many logTokenParser
+  tkn <- many logTokenParser
   _ <- string ":end-tokenize:" >> readEol
-  return tokens
+  return tkn
 
 logTokenVars :: Parser String
 logTokenVars = char '$' >> identifierValue
@@ -309,12 +306,12 @@ logSpecParser = do
   _ <- spaces >> string "start-rules:" >> spaces
   rules <- many logRuleParserParam
   _ <- spaces >> string ":end-rules:" >> spaces
-  tokens <- logTokenizerParser
+  tkn <- logTokenizerParser
   _ <- spaces
   reports <- many logReportParser
   _ <- spaces
   return hdr { specRules   = rules
-             , specTokens  = tokens
+             , specTokens  = tkn
              , specReport  = reports
              }
 

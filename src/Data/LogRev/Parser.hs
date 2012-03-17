@@ -40,10 +40,6 @@ validVHostChars = ['0' .. '9']
 plainValue :: Parser String
 plainValue = many1 (noneOf " \n")
 
-parseInteger :: GenParser Char st Int
-parseInteger = do x <- many $ oneOf validNumberChars
-                  return (read x)
-
 parseVHost :: GenParser Char st String
 parseVHost = many $ oneOf validVHostChars
 

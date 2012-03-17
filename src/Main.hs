@@ -30,7 +30,7 @@ import Data.List
 import Data.LogRev.LogStats
 import Data.LogRev.Parser
 import Data.LogRev.Processing
-import Proc.LRS.Parser
+import Proc.LRS.Parser ()
 import Data.Maybe
 import Graphics.LogRev.Charts
 import System.Console.GetOpt
@@ -39,7 +39,6 @@ import System.Exit
 import System.IO
 import System.IO.Unsafe ()
 import System.Posix.Temp ()
-import Text.JSON.Generic (encodeJSON)
 import Text.Printf
 
 

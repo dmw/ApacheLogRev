@@ -330,9 +330,6 @@ foreign import ccall safe "GeoIP.h &GeoIP_delete"
 foreign import ccall safe "GeoIPCity.h GeoIP_record_by_ipnum"
   c_GeoIP_record_by_ipnum :: Ptr GeoIP -> CULong -> IO (Ptr GeoIPRecord)
 
-foreign import ccall safe "GeoIPCity.h &GeoIPRecord_delete"
-  c_GeoIPRecord_delete_funPtr :: FunPtr (Ptr GeoIPRecord -> IO ())
-
 foreign import ccall safe "GeoIPCity.h GeoIPRecord_delete"
   c_GeoIPRecord_delete :: Ptr GeoIPRecord -> IO ()
 
