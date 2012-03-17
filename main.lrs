@@ -1,0 +1,114 @@
+
+
+log-spec:	apache-vhost-log
+log-title:	"Apache Virtual Host Log"
+
+start-rules:
+
+	log-rule:	vhost
+			log-is:		:built-in:vhost
+	:end-rule:
+
+	log-rule:	ip
+			log-is:		:built-in:ip
+	:end-rule:
+
+	log-rule:	ident
+			log-is:		:built-in:ident
+	:end-rule:
+
+	log-rule:	user
+			log-is:		:built-in:username
+	:end-rule:
+
+	log-rule:	date
+			log-is:		:built-in:date
+			param:		:date-format:'%d/%b/%Y:%H:%M:%S %z'
+	:end-rule:
+
+	log-rule:	request
+			log-is:		:built-in:http-verb
+	:end-rule:
+
+	log-rule:	status
+			log-is:		:built-in:integer
+	:end-rule:
+
+	log-rule:	bytes
+			log-is:		:built-in:integer
+	:end-rule:
+
+	log-rule:	referrer
+			log-is:		:built-in:uri
+	:end-rule:
+
+	log-rule:	user-agent
+			log-is:		:built-in:quoted-value
+	:end-rule:
+
+:end-rules:
+
+log-tokenize:
+		| vhost
+		| ip
+		| ident
+		| user
+		| date
+		| request
+		| status
+		| bytes
+		| referrer
+		| user-agent
+:end-tokenize:
+
+define-report:	country-percent
+define-title:	"Country Hit Percent"
+
+
+start-vars:
+       define-var:	country
+       define-value:	:function:geo-locate=$ip|as-is
+       :end-var:
+
+       define-var:	size
+       define-value:	:function:sum=$country$bytes|percent
+       :end-var:
+
+       define-var:	count
+       define-value:	:function:count=$country$ip|percent
+       :end-var:
+:end-vars:
+
+start-tables:
+
+       define-table:	country|count,size
+       table-id:	country_count_size
+       table-title:	"Country Hit Percentage"
+       :end-table:
+
+:end-tables:
+
+start-charts:
+
+       define-chart:	country|count,size
+       chart-id:	country_count_size
+       chart-title:	"Country Hit Percentage"
+       chart-use:	bar-chart
+       :end-chart:
+
+:end-charts:
+
+report-structure:
+
+       $title:as-is
+       $date:dd.mm.YYYY
+       $table:country_count_size
+       $chart:country_count_size
+       $output:pdf
+
+:end-structure:
+
+:end-report:
+
+:log-spec-end:
+

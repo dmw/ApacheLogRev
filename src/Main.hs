@@ -30,6 +30,7 @@ import Data.List
 import Data.LogRev.LogStats
 import Data.LogRev.Parser
 import Data.LogRev.Processing
+import Proc.LRS.Parser
 import Data.Maybe
 import Graphics.LogRev.Charts
 import System.Console.GetOpt
@@ -38,6 +39,7 @@ import System.Exit
 import System.IO
 import System.IO.Unsafe()
 import System.Posix.Temp()
+import Text.JSON.Generic(encodeJSON)
 import Text.Printf
 
 
@@ -72,6 +74,7 @@ startOptions = LogRevOptions {
   , optHelp     = False
   , inpFile     = "main.log"
   , outFile     = "report"
+  , lrsFile     = "main.lrs"
   , geoHdl      = safeGeoDB
 }
 
@@ -90,6 +93,9 @@ progOptions =
   , Option "o" ["output"]
     (ReqArg (\x o -> return o { outFile = x }) "FILE")
     "output file"
+  , Option "l" ["lrs"]
+    (ReqArg (\x o -> return o { lrsFile = x }) "FILE")
+    "log reviser specification"
   , Option "v" ["verbose"]
     (NoArg (\o -> return o { optVerbose = True }))
     "verbose output"

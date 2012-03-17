@@ -62,6 +62,7 @@ data LogRevOptions = LogRevOptions {
   , optHelp     :: Bool
   , inpFile     :: String
   , outFile     :: String
+  , lrsFile     :: String
   , geoHdl      :: Maybe G.GeoDB
 }
 

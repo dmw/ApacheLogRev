@@ -1,4 +1,8 @@
 dist
 .dist-buildwrapper
 .project
+*.log
+report_connections_from_countries.png
+report_http_status.png
+
 
