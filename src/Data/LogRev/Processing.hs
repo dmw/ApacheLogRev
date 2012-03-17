@@ -26,7 +26,7 @@ module Data.LogRev.Processing (
 import qualified Data.ByteString.Char8 as B
 import qualified Data.GeoIP.GeoDB as G
 import qualified Data.String.Utils as S
-import qualified Data.Map as M()
+import qualified Data.Map as M ()
 import Data.LogRev.LogStats
 import Data.Maybe
 

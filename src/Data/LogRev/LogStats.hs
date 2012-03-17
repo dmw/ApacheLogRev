@@ -18,10 +18,10 @@ module Data.LogRev.LogStats (
   StringIntMap
   , StringDoubleMap
   , LogRevStatsCol
-  , LogLine(..)
-  , LogRevOptions(..)
-  , LogRevStats(..)
-  , LogRevStatsAction(..)
+  , LogLine (..)
+  , LogRevOptions (..)
+  , LogRevStats (..)
+  , LogRevStatsAction (..)
   , addIntMapEntry
   , addPIntMapEntry
   , addFltMapEntry

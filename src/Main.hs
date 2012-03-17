@@ -18,14 +18,14 @@ module Main (main) where
 
 
 import qualified Control.Monad as D
-import qualified Data.ByteString.Char8 as B()
+import qualified Data.ByteString.Char8 as B ()
 import qualified Data.Map as M
 import qualified Data.String.Utils as S
 
-import Data.Char()
+import Data.Char ()
 import Data.GeoIP.GeoDB
-import Data.Colour()
-import Data.Colour.Names()
+import Data.Colour ()
+import Data.Colour.Names ()
 import Data.List
 import Data.LogRev.LogStats
 import Data.LogRev.Parser
@@ -37,9 +37,9 @@ import System.Console.GetOpt
 import System.Environment
 import System.Exit
 import System.IO
-import System.IO.Unsafe()
-import System.Posix.Temp()
-import Text.JSON.Generic(encodeJSON)
+import System.IO.Unsafe ()
+import System.Posix.Temp ()
+import Text.JSON.Generic (encodeJSON)
 import Text.Printf
 
 
@@ -80,42 +80,43 @@ startOptions = LogRevOptions {
 
 
 safeGeoDB :: Maybe GeoDB
-safeGeoDB = let geo = bringGeoCityDB
-                in if geo /= Nothing
-                      then geo
-                      else bringGeoCountryDB
+safeGeoDB = let
+  geo = bringGeoCityDB
+  in if geo /= Nothing
+        then geo
+     else bringGeoCountryDB
 
 progOptions :: [OptDescr (LogRevOptions -> IO LogRevOptions)]
 progOptions =
   [ Option "i" ["input"]
-    (ReqArg (\x o -> return o { inpFile = x }) "FILE")
+    (ReqArg (\ x o -> return o { inpFile = x }) "FILE")
     "input file"
   , Option "o" ["output"]
-    (ReqArg (\x o -> return o { outFile = x }) "FILE")
+    (ReqArg (\ x o -> return o { outFile = x }) "FILE")
     "output file"
   , Option "l" ["lrs"]
-    (ReqArg (\x o -> return o { lrsFile = x }) "FILE")
+    (ReqArg (\ x o -> return o { lrsFile = x }) "FILE")
     "log reviser specification"
   , Option "v" ["verbose"]
-    (NoArg (\o -> return o { optVerbose = True }))
+    (NoArg (\ o -> return o { optVerbose = True }))
     "verbose output"
   , Option "V" ["version"]
-    (NoArg (\_ -> hPutStrLn stderr progVersion
-                  >> exitWith ExitSuccess))
+    (NoArg (\ _ -> hPutStrLn stderr progVersion
+                   >> exitWith ExitSuccess))
     "displays program version"
   , Option "h" ["help"]
-    (NoArg (\_ -> do prg <- getProgName
-                     hPutStrLn stderr (usageInfo prg progOptions)
-                     >> exitWith ExitSuccess))
+    (NoArg (\ _ -> do prg <- getProgName
+                      hPutStrLn stderr (usageInfo prg progOptions)
+                      >> exitWith ExitSuccess))
     "displays this message"
   ]
 
 logRevMakeStringStat :: LogRevStatsAction -> String
 logRevMakeStringStat l = printf "%s:\n%s\n" (aHeader l)
                          $ S.join "\n"
-                         $ fmap (\x -> printf f
-                                       x (r M.! x) (s M.! x)
-                                       (logRevCntPer l x) (logRevSzPer l x)) m
+                         $ fmap (\ x -> printf f
+                                        x (r M.! x) (s M.! x)
+                                        (logRevCntPer l x) (logRevSzPer l x)) m
                          where r = sMap o
                                s = sSz o
                                m = sort $ M.keys r
@@ -142,11 +143,12 @@ foldLogLines :: [LogRevStatsAction]
                 -> [LogRevStatsAction]
 foldLogLines [] _ [] = []
 foldLogLines ms _ [] = ms
-foldLogLines ms o (x:xs) = let lm :: Maybe LogLine
-                               ns :: [LogRevStatsAction]
-                               lm = x `seq` parseLogLine x
-                               ns = lm `seq` o `seq` procLogMachine o ms lm
-                               in foldLogLines ns o xs
+foldLogLines ms o (x : xs) = let
+  lm :: Maybe LogLine
+  ns :: [LogRevStatsAction]
+  lm = x `seq` parseLogLine x
+  ns = lm `seq` o `seq` procLogMachine o ms lm
+  in foldLogLines ns o xs
 
 procResults :: [LogRevStatsAction] -> LogRevOptions -> IO ()
 procResults xs o = putStrLn (S.join "\n" $ fmap logRevMakeStringStat xs)
@@ -157,10 +159,11 @@ handlerIOError e = putStrLn (printf "IOError: %s" $ show e)
                    >> exitFailure
 
 readLogFile :: [LogRevStatsAction] -> LogRevOptions -> IO ()
-readLogFile a o = do fh <- openFile (inpFile o) ReadMode
-                     cont <- hGetContents fh
-                     procResults (foldLogLines a o $ lines cont) o
-                     hClose fh
+readLogFile a o = do
+  fh <- openFile (inpFile o) ReadMode
+  cont <- hGetContents fh
+  procResults (foldLogLines a o $ lines cont) o
+  hClose fh
 
 processArgs :: IO ()
 processArgs = do

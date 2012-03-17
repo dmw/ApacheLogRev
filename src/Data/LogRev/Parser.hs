@@ -35,7 +35,7 @@ validVHostChars :: String
 validVHostChars = ['0' .. '9']
                    ++ ['a' .. 'z']
                    ++ ['A' .. 'Z']
-                   ++ ['.', '-', '_', ':']
+                   ++ ".-_:"
 
 plainValue :: Parser String
 plainValue = many1 (noneOf " \n")
@@ -45,8 +45,7 @@ parseInteger = do x <- many $ oneOf validNumberChars
                   return (read x)
 
 parseVHost :: GenParser Char st String
-parseVHost = do vh <- many $ oneOf validVHostChars
-                return (vh)
+parseVHost = many $ oneOf validVHostChars
 
 parseIP :: GenParser Char st String
 parseIP = do o1 <- many $ oneOf validNumberChars
@@ -98,7 +97,7 @@ logLineVHost = do
   ref <- dashChar <|> quotedValue
   _ <- space
   ua <- dashChar <|> quotedValue
-  return $ LogLine {
+  return LogLine {
     getVhost  = vhost
     , getIP     = ip
     , getIdent  = ident
@@ -130,7 +129,7 @@ logLineBasic = do
   ref <- dashChar <|> quotedValue
   _ <- space
   ua <- dashChar <|> quotedValue
-  return $ LogLine {
+  return LogLine {
     getVhost    = ""
     , getIP     = ip
     , getIdent  = ident
@@ -144,11 +143,12 @@ logLineBasic = do
     }
 
 logLine :: Parser LogLine
-logLine = do logLineBasic
-             <|> logLineVHost
+logLine = logLineBasic <|> logLineVHost
 
 parseLogLine :: String -> Maybe LogLine
-parseLogLine s = let r = parse logLine "[Invalid]" s
-                     in case r of
-                             Left  _   -> Nothing
-                             Right itm -> itm `seq` Just itm
+parseLogLine s = let
+  r = parse logLine "[Invalid]" s
+  in case r of
+          Left  _   -> Nothing
+          Right itm -> itm `seq` Just itm
+
