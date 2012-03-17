@@ -24,9 +24,27 @@ module Data.LogRev.Parser (
   ) where
 
 
+import Control.DeepSeq
+
 import Data.LogRev.LogStats
 import Text.ParserCombinators.Parsec
 import Text.Printf
+
+
+startLogLine :: LogLine
+startLogLine = LogLine {
+  getVhost    = ""
+  , getIP     = ""
+  , getIdent  = ""
+  , getUser   = ""
+  , getDate   = ""
+  , getReq    = ""
+  , getStatus = ""
+  , getBytes  = ""
+  , getRef    = ""
+  , getUA     = ""
+  }
+
 
 validNumberChars :: String
 validNumberChars = ['0' .. '9']
@@ -93,7 +111,7 @@ logLineVHost = do
   ref <- dashChar <|> quotedValue
   _ <- space
   ua <- dashChar <|> quotedValue
-  return LogLine {
+  return startLogLine {
     getVhost  = vhost
     , getIP     = ip
     , getIdent  = ident
@@ -125,7 +143,7 @@ logLineBasic = do
   ref <- dashChar <|> quotedValue
   _ <- space
   ua <- dashChar <|> quotedValue
-  return LogLine {
+  return startLogLine {
     getVhost    = ""
     , getIP     = ip
     , getIdent  = ident
@@ -146,5 +164,5 @@ parseLogLine s = let
   r = parse logLine "[Invalid]" s
   in case r of
           Left  _   -> Nothing
-          Right itm -> itm `seq` Just itm
+          Right itm -> itm `deepseq` Just itm
 

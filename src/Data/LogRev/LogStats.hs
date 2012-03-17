@@ -29,6 +29,8 @@ module Data.LogRev.LogStats (
   ) where
 
 
+import Control.DeepSeq
+
 import qualified Data.Map as M
 import qualified Data.GeoIP.GeoDB as G
 
@@ -55,6 +57,9 @@ data LogLine = LogLine {
   , getRef      :: String
   , getUA       :: String
 } deriving (Show, Eq)
+
+instance NFData LogLine where
+  rnf a = a `seq` ()
 
 data LogRevOptions = LogRevOptions {
   optVerbose    :: Bool
