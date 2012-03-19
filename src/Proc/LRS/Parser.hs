@@ -316,7 +316,9 @@ logSpecParser = do
              }
 
 parseLRS :: String -> Either String LRS
-parseLRS s = let r = parse logSpecParser "[Invalid]" s
-                     in case r of
-                             Left  err -> Left $ show err
-                             Right itm -> itm `seq` Right itm
+parseLRS s = let
+  r = parse logSpecParser "[Invalid]" s
+  in case r of
+          Left  err -> Left $ show err
+          Right itm -> itm `seq` Right itm
+

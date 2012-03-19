@@ -86,9 +86,8 @@ quotedValue = do
   return content
 
 dashChar :: Parser String
-dashChar = do
-  x <- char '-'
-  return (show x)
+dashChar = do x <- char '-'
+              return (show x)
 
 logLineVHost :: Parser LogLine
 logLineVHost = do
@@ -112,16 +111,16 @@ logLineVHost = do
   _ <- space
   ua <- dashChar <|> quotedValue
   return startLogLine {
-    getVhost  = vhost
-    , getIP     = ip
-    , getIdent  = ident
-    , getUser   = user
-    , getDate   = date
-    , getReq    = req
-    , getStatus = status
-    , getBytes  = bytes
-    , getRef    = ref
-    , getUA     = ua
+    getVhost    = vhost `seq` vhost
+    , getIP     = ip `seq` ip
+    , getIdent  = ident `seq` ident
+    , getUser   = user `seq` user
+    , getDate   = date `seq` date
+    , getReq    = req `seq` req
+    , getStatus = status `seq` status
+    , getBytes  = bytes `seq` bytes
+    , getRef    = ref `seq` ref
+    , getUA     = ua `seq` ua
     }
 
 logLineBasic :: Parser LogLine
@@ -145,20 +144,21 @@ logLineBasic = do
   ua <- dashChar <|> quotedValue
   return startLogLine {
     getVhost    = ""
-    , getIP     = ip
-    , getIdent  = ident
-    , getUser   = user
-    , getDate   = date
-    , getReq    = req
-    , getStatus = status
-    , getBytes  = bytes
-    , getRef    = ref
-    , getUA     = ua
+    , getIP     = ip `seq` ip
+    , getIdent  = ident `seq` ident
+    , getUser   = user `seq` user
+    , getDate   = date `seq` date
+    , getReq    = req `seq` req
+    , getStatus = status `seq` status
+    , getBytes  = bytes `seq` bytes
+    , getRef    = ref `seq` ref
+    , getUA     = ua `seq` ua
     }
 
 logLine :: Parser LogLine
 logLine = logLineBasic <|> logLineVHost
 
+-- {-# SCC "parseLogLine" #-}
 parseLogLine :: String -> Maybe LogLine
 parseLogLine s = let
   r = parse logLine "[Invalid]" s
