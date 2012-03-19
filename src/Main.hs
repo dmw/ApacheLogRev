@@ -22,6 +22,7 @@ import qualified Data.ByteString.Char8 as B ()
 import qualified Data.Map as M
 import qualified Data.String.Utils as S
 
+import Control.DeepSeq
 import Data.Char ()
 import Data.GeoIP.GeoDB
 import Data.Colour ()
@@ -133,7 +134,7 @@ procLogMachine :: LogRevOptions
                   -> Maybe LogLine
                   -> [LogRevStatsAction]
 procLogMachine o m l = if l /= Nothing
-                          then fmap (flip (applyAction o) $ fromJust l) m
+                          then m `seq` fmap (flip (applyAction o) $ fromJust l) m
                        else m
 
 foldLogLines :: [LogRevStatsAction]
@@ -142,12 +143,12 @@ foldLogLines :: [LogRevStatsAction]
                 -> [LogRevStatsAction]
 foldLogLines [] _ [] = []
 foldLogLines ms _ [] = ms
-foldLogLines ms o (x : xs) = let
+foldLogLines ms o (x : xs) = {-# SCC "foldLogLines" #-} let
   lm :: Maybe LogLine
   ns :: [LogRevStatsAction]
-  lm = x `seq` parseLogLine x
+  lm = parseLogLine x
   ns = lm `seq` o `seq` procLogMachine o ms lm
-  in foldLogLines ns o xs
+  in ns `deepseq` foldLogLines ns o xs
 
 procResults :: [LogRevStatsAction] -> LogRevOptions -> IO ()
 procResults xs o = putStrLn (S.join "\n" $ fmap logRevMakeStringStat xs)
@@ -159,10 +160,8 @@ handlerIOError e = putStrLn (printf "IOError: %s" $ show e)
 
 readLogFile :: [LogRevStatsAction] -> LogRevOptions -> IO ()
 readLogFile a o = do
-  fh <- openFile (inpFile o) ReadMode
-  cont <- hGetContents fh
+  cont <- readFile (inpFile o)
   procResults (foldLogLines a o $ lines cont) o
-  hClose fh
 
 processArgs :: IO ()
 processArgs = do

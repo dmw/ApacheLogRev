@@ -58,9 +58,6 @@ data LogLine = LogLine {
   , getUA       :: String
 } deriving (Show, Eq)
 
-instance NFData LogLine where
-  rnf a = a `seq` ()
-
 data LogRevOptions = LogRevOptions {
   optVerbose    :: Bool
   , optVersion  :: Bool
@@ -99,6 +96,12 @@ instance Show LogRevStatsAction where
   show a = printf " (%s:%s) " hdr out
            where hdr = aHeader a
                  out = show $! aOutput a
+
+instance NFData LogLine where
+  rnf a = a `seq` ()
+
+instance NFData LogRevStatsAction where
+  rnf a = a `seq` ()
 
 addIntMapEntry :: String -> StringIntMap -> StringIntMap
 addIntMapEntry loc m = if M.member loc m
