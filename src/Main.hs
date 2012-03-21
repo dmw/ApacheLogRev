@@ -13,27 +13,21 @@
 -- me directly if you want to contribute.
 -----------------------------------------------------------------------------
 
-
 module Main (main) where
 
 
-import qualified Control.Monad as D
-import qualified Data.ByteString.Char8 as B ()
+import qualified Control.Monad as D (join)
 import qualified Data.Map as M
-import qualified Data.String.Utils as S
+import qualified Data.String.Utils as S (join)
 
-import Control.DeepSeq
-import Data.Char ()
+import Control.DeepSeq (deepseq)
 import Data.GeoIP.GeoDB
-import Data.Colour ()
-import Data.Colour.Names ()
 import Data.List
 import Data.LogRev.LogStats
 import Data.LogRev.Parser
 import Data.LogRev.Processing
-import Proc.LRS.Parser ()
-import Data.Maybe
 import Graphics.LogRev.Charts
+import Data.Maybe (fromJust, isJust)
 import System.Console.GetOpt
 import System.Environment
 import System.Exit
@@ -53,19 +47,19 @@ emptyLogRevStats = LogRevStats { sTot   = 0
                                , sMap   = M.empty
                                , sPer   = M.empty }
 
-actionMap :: [LogRevStatsAction]
-actionMap = [LogRevStatsAction {
-                aHeader   = "HTTP Status"
-                , aAction = statsHandlerStatus
-                , aOutput = emptyLogRevStats
-                , aPlot   = plotPngBarChart
-                },
-             LogRevStatsAction {
-                aHeader   = "Connections From Countries"
-                , aAction = statsHandlerCountry
-                , aOutput = emptyLogRevStats
-                , aPlot   = plotPngBarChart
-                }]
+actionMap :: LogRevStatsMap
+actionMap = M.fromList [("http_status", LogRevStatsAction {
+                            aHeader   = "HTTP Status"
+                            , aAction = statsHandlerStatus
+                            , aOutput = emptyLogRevStats
+                            , aPlot   = plotPngBarChart
+                            })
+                        , ("connections", LogRevStatsAction {
+                              aHeader   = "Connections From Countries"
+                              , aAction = statsHandlerCountry
+                              , aOutput = emptyLogRevStats
+                              , aPlot   = plotPngBarChart
+                              })]
 
 startOptions :: LogRevOptions
 startOptions = LogRevOptions {
@@ -82,7 +76,7 @@ startOptions = LogRevOptions {
 safeGeoDB :: Maybe GeoDB
 safeGeoDB = let
   geo = bringGeoCityDB
-  in if geo /= Nothing
+  in if isJust geo
         then geo
      else bringGeoCountryDB
 
@@ -102,12 +96,12 @@ progOptions =
     "verbose output"
   , Option "V" ["version"]
     (NoArg (\ _ -> hPutStrLn stderr progVersion
-                   >> exitWith ExitSuccess))
+                   >> exitSuccess))
     "displays program version"
   , Option "h" ["help"]
     (NoArg (\ _ -> do prg <- getProgName
                       hPutStrLn stderr (usageInfo prg progOptions)
-                      >> exitWith ExitSuccess))
+                      >> exitSuccess))
     "displays this message"
   ]
 
@@ -130,46 +124,47 @@ applyAction :: LogRevOptions
 applyAction o a l = a { aOutput = aAction a o (aOutput a) l }
 
 procLogMachine :: LogRevOptions
-                  -> [LogRevStatsAction]
+                  -> LogRevStatsMap
                   -> Maybe LogLine
-                  -> [LogRevStatsAction]
-procLogMachine o m l = if l /= Nothing
-                          then m `seq` fmap (flip (applyAction o) $ fromJust l) m
-                       else m
+                  -> LogRevStatsMap
+procLogMachine o ~m l = if isJust l
+                           then m `seq` fmap (flip (applyAction o) $ fromJust l) m
+                        else m
 
-foldLogLines :: [LogRevStatsAction]
+-- {-# SCC "foldLogLines" #-}
+foldLogLines :: LogRevStatsMap
                 -> LogRevOptions
                 -> [String]
-                -> [LogRevStatsAction]
-foldLogLines [] _ [] = []
+                -> LogRevStatsMap
 foldLogLines ms _ [] = ms
-foldLogLines ms o (x : xs) = {-# SCC "foldLogLines" #-} let
-  lm :: Maybe LogLine
-  ns :: [LogRevStatsAction]
-  lm = parseLogLine x
-  ns = lm `seq` o `seq` procLogMachine o ms lm
-  in ns `deepseq` foldLogLines ns o xs
+foldLogLines ms o ~ls = fll ms ls
+                        where fll rs [] = rs
+                              fll rs (x : ~xs) = let
+                                lm = parseLogLine x
+                                ns = lm `seq` o `seq` procLogMachine o rs lm
+                                in seq ns $ fll ns xs
 
-procResults :: [LogRevStatsAction] -> LogRevOptions -> IO ()
-procResults xs o = putStrLn (S.join "\n" $ fmap logRevMakeStringStat xs)
-                   >> mapM_ (D.join (`aPlot` o)) xs
+procResults :: LogRevStatsMap -> LogRevOptions -> IO ()
+procResults ~xs o = putStrLn (S.join "\n"
+                              $ fmap (\x -> logRevMakeStringStat
+                                            $ xs M.! x) (M.keys xs))
+                    >> mapM_ (\x -> aPlot (xs M.! x) o (xs M.! x)) (M.keys xs)
 
 handlerIOError :: IOError -> IO ()
 handlerIOError e = putStrLn (printf "IOError: %s" $ show e)
                    >> exitFailure
 
-readLogFile :: [LogRevStatsAction] -> LogRevOptions -> IO ()
-readLogFile a o = do
-  cont <- readFile (inpFile o)
-  procResults (foldLogLines a o $ lines cont) o
+readLogFile :: String -> LogRevStatsMap -> LogRevOptions -> IO ()
+readLogFile ~s a o = {-# SCC "readLogFile" #-} procResults (foldLogLines a o $ lines s) o
 
 processArgs :: IO ()
 processArgs = do
     argv <- getArgs
     let (act, nopt, errs) = getOpt RequireOrder progOptions argv
     opts <- foldl (>>=) (return startOptions) act
+    cont <- readFile $ inpFile opts
     putStrLn $ printf "Processing: %s\n" (inpFile opts)
-    readLogFile actionMap opts
+    readLogFile cont actionMap opts
 
 main :: IO ()
 main = processArgs `catch` handlerIOError

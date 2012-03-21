@@ -155,7 +155,7 @@ logRuleParserParam = do
   _ <- spaces
   ri <- parseSection "log-rule:"
   _ <- spaces >> string "log-is:" >> spaces
-  lt <- (parseBuiltIn <|> parseCustom)
+  lt <- parseBuiltIn <|> parseCustom
   pr <- identifierValue
   _ <- spaces
   pm <- many parseParam
@@ -204,7 +204,7 @@ logParseVar = do
 commaDelimVal :: Parser String
 commaDelimVal = do
   x <- identifierValue
-  _ <- (char '\n' <|> char '\r' <|> char ',')
+  _ <- char '\n' <|> char '\r' <|> char ','
   return x
 
 groupColParser :: Parser (String, [String])

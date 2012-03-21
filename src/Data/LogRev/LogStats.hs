@@ -18,6 +18,7 @@ module Data.LogRev.LogStats (
   StringIntMap
   , StringDoubleMap
   , LogRevStatsCol
+  , LogRevStatsMap
   , LogLine (..)
   , LogRevOptions (..)
   , LogRevStats (..)
@@ -44,6 +45,9 @@ type StringIntMap = M.Map String Int
 type StringDoubleMap = M.Map String Double
 
 type LogRevStatsCol = M.Map String LogRevStats
+
+type LogRevStatsMap = M.Map String LogRevStatsAction
+
 
 data LogLine = LogLine {
   getVhost      :: String
@@ -78,15 +82,11 @@ data LogRevStats = LogRevStats {
 
 data LogRevStatsAction = LogRevStatsAction {
   aHeader       :: String
-  , aAction     :: LogRevOptions
-                   -> LogRevStats
-                   -> LogLine
-                   -> LogRevStats
-  , aPlot       :: LogRevOptions
-                   -> LogRevStatsAction
-                   -> IO (PickFn ())
+  , aAction     :: LogRevOptions -> LogRevStats -> LogLine -> LogRevStats
+  , aPlot       :: LogRevOptions -> LogRevStatsAction -> IO (PickFn ())
   , aOutput     :: LogRevStats
 }
+
 
 instance Show LogRevStats where
   show a = printf " %d " tot
@@ -102,6 +102,7 @@ instance NFData LogLine where
 
 instance NFData LogRevStatsAction where
   rnf a = a `seq` ()
+
 
 addIntMapEntry :: String -> StringIntMap -> StringIntMap
 addIntMapEntry loc m = if M.member loc m
