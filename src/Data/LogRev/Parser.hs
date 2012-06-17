@@ -24,7 +24,7 @@ module Data.LogRev.Parser (
   ) where
 
 
-import Control.DeepSeq
+import Control.DeepSeq ()
 
 import Data.LogRev.LogStats
 import Text.ParserCombinators.Parsec
@@ -53,19 +53,23 @@ startLogLine = LogLine {
 validNumberChars :: String
 validNumberChars = ['0' .. '9']
 
+
 validVHostChars :: String
 validVHostChars = ['0' .. '9']
                    ++ ['a' .. 'z']
                    ++ ['A' .. 'Z']
                    ++ ".-_:"
 
+
 plainValue :: Parser String
 plainValue = do x <- many1 (noneOf " \n")
                 return (x `seq` x)
 
+
 parseVHost :: GenParser Char st String
 parseVHost = do x <- many $ oneOf validVHostChars
                 return (x `seq` x)
+
 
 parseIP :: GenParser Char st String
 parseIP = do o1 <- many $ oneOf validNumberChars
@@ -78,12 +82,14 @@ parseIP = do o1 <- many $ oneOf validNumberChars
              return $ let x = (printf "%s.%s.%s.%s" o1 o2 o3 o4)
                           in x `seq` x
 
+
 bracketedValue :: Parser String
 bracketedValue = do
   _ <- char '['
   content <- many (noneOf "]")
   _ <- char ']'
   return (content `seq` content)
+
 
 quotedValue :: Parser String
 quotedValue = do
@@ -92,9 +98,11 @@ quotedValue = do
   _ <- char '"'
   return (content `seq` content)
 
+
 dashChar :: Parser String
 dashChar = do x <- char '-'
               return (show x)
+
 
 logLineVHost :: Parser LogLine
 logLineVHost = do
@@ -130,6 +138,7 @@ logLineVHost = do
     , getUA     = ua
     }
 
+
 logLineBasic :: Parser LogLine
 logLineBasic = do
   ip <- parseIP
@@ -161,6 +170,7 @@ logLineBasic = do
     , getRef    = ref
     , getUA     = ua
     }
+
 
 logLine :: Parser LogLine
 logLine = logLineBasic <|> logLineVHost
