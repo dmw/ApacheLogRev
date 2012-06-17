@@ -157,15 +157,14 @@ foldLogLines :: Handle
                 -> LogRevStatsMap
                 -> LogRevOptions
                 -> IO ()
-foldLogLines h ms o = let
-  foldLogLines' rs = do
-    e <- hIsEOF h
-    if e
-      then procResults rs o
-      else do x <- hGetLine h
-              foldLogLines' (procLogMachine o rs
-                             $ parseLogLine x)
-  in foldLogLines' ms
+foldLogLines h ~ms ~o = let foldLogLines' hs ~rs ~os = do
+                              e <- hIsEOF hs
+                              if e
+                                then rs `seq` os `seq` procResults rs os
+                                else do x <- hGetLine hs
+                                        foldLogLines' hs (procLogMachine os rs
+                                                          $ parseLogLine x) os
+                        in foldLogLines' h ms o
 
 
 procResults :: LogRevStatsMap -> LogRevOptions -> IO ()
