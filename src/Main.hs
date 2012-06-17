@@ -158,7 +158,6 @@ foldLogLines :: Handle
                 -> LogRevOptions
                 -> IO ()
 foldLogLines h ms o = let
-  foldLogLines' :: LogRevStatsMap -> IO ()
   foldLogLines' rs = do
     e <- hIsEOF h
     if e
