@@ -13,14 +13,17 @@
 -- me directly if you want to contribute.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE BangPatterns #-}
+
 module Main (main) where
 
 
 import qualified Data.Map as M
 import qualified Data.String.Utils as S (join)
 
-import Control.DeepSeq ()
+import Control.DeepSeq (deepseq)
 import Data.GeoIP.GeoDB
+import Data.IORef
 import Data.List
 import Data.LogRev.LogStats
 import Data.LogRev.Parser
@@ -144,35 +147,43 @@ applyAction o a l = a { aOutput = aAction a o (aOutput a) l }
 
 
 procLogMachine :: LogRevOptions
-                  -> LogRevStatsMap
-                  -> Maybe LogLine
-                  -> LogRevStatsMap
-procLogMachine o ~m l = if isJust l
-                           then m `seq` fmap (flip (applyAction o)
-                                              $ fromJust l) m
-                        else m
+                  -> IORef LogRevStatsMap
+                  -> String
+                  -> IO ()
+procLogMachine o mx l = do
+  m <- readIORef mx
+  writeIORef mx
+    $! fmap (flip (applyAction o)
+             $! fromJust
+             $! parseLogLine l) m
 
 
 foldLogLines :: Handle
-                -> LogRevStatsMap
+                -> IORef LogRevStatsMap
                 -> LogRevOptions
                 -> IO ()
-foldLogLines h ~ms ~o = let foldLogLines' hs ~rs ~os = do
-                              e <- hIsEOF hs
-                              if e
-                                then rs `seq` os `seq` procResults rs os
-                                else do x <- hGetLine hs
-                                        foldLogLines' hs (procLogMachine os rs
-                                                          $ parseLogLine x) os
-                        in foldLogLines' h ms o
+foldLogLines h ms o = let
+  foldLogLines' hs rsx os = do
+    e <- hIsEOF hs
+    if e
+      then do
+           rs <- readIORef rsx
+           rs `seq` os `seq` procResults rs os
+      else do
+           x <- hGetLine hs
+           procLogMachine os rsx x
+           foldLogLines' hs rsx os
+  in foldLogLines' h ms o
 
 
-procResults :: LogRevStatsMap -> LogRevOptions -> IO ()
+procResults :: LogRevStatsMap
+               -> LogRevOptions
+               -> IO ()
 procResults xs o = putStrLn report >> mapM_ mkpl mkeys
-                   where report = S.join "\n" $ fmap mkrss mkeys
-                         mkeys = M.keys xs
-                         mkpl x = aPlot (xs M.! x) o (xs M.! x)
-                         mkrss x = logRevMakeStringStat $ xs M.! x
+  where report = S.join "\n" $ fmap mkrss mkeys
+        mkeys = M.keys xs
+        mkpl x = aPlot (xs M.! x) o (xs M.! x)
+        mkrss x = logRevMakeStringStat $ xs M.! x
 
 
 handlerIOError :: IOError -> IO ()
@@ -186,8 +197,9 @@ processArgs = do
     let (act, nopt, errs) = getOpt RequireOrder progOptions argv
     opts <- foldl (>>=) (return startOptions) act
     hndl <- openFile (inpFile opts) ReadMode
+    refActionMap <- newIORef actionMap
     putStrLn $ printf "Processing: %s\n" (inpFile opts)
-    foldLogLines hndl actionMap opts
+    foldLogLines hndl refActionMap opts
 
 
 main :: IO ()

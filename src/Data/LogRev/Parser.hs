@@ -24,7 +24,7 @@ module Data.LogRev.Parser (
   ) where
 
 
-import Control.DeepSeq ()
+import Control.DeepSeq (deepseq)
 
 import Data.LogRev.LogStats
 import Text.ParserCombinators.Parsec
@@ -63,12 +63,12 @@ validVHostChars = ['0' .. '9']
 
 plainValue :: Parser String
 plainValue = do x <- many1 (noneOf " \n")
-                return (x `seq` x)
+                return x
 
 
 parseVHost :: GenParser Char st String
 parseVHost = do x <- many $ oneOf validVHostChars
-                return (x `seq` x)
+                return x
 
 
 parseIP :: GenParser Char st String
@@ -79,8 +79,7 @@ parseIP = do o1 <- many $ oneOf validNumberChars
              o3 <- many $ oneOf validNumberChars
              _  <- char '.'
              o4 <- many $ oneOf validNumberChars
-             return $ let x = (printf "%s.%s.%s.%s" o1 o2 o3 o4)
-                          in x `seq` x
+             return $ printf "%s.%s.%s.%s" o1 o2 o3 o4
 
 
 bracketedValue :: Parser String
@@ -88,7 +87,7 @@ bracketedValue = do
   _ <- char '['
   content <- many (noneOf "]")
   _ <- char ']'
-  return (content `seq` content)
+  return content
 
 
 quotedValue :: Parser String
@@ -96,7 +95,7 @@ quotedValue = do
   _ <- char '"'
   content <- many (noneOf "\"")
   _ <- char '"'
-  return (content `seq` content)
+  return content
 
 
 dashChar :: Parser String

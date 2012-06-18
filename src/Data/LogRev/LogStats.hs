@@ -62,6 +62,7 @@ data LogLine = LogLine {
   , getUA       :: String
 } deriving (Show, Eq)
 
+
 data LogRevOptions = LogRevOptions {
   optVerbose    :: Bool
   , optVersion  :: Bool
@@ -72,6 +73,7 @@ data LogRevOptions = LogRevOptions {
   , geoHdl      :: Maybe G.GeoDB
 }
 
+
 data LogRevStats = LogRevStats {
   sTot          :: Int
   , sSzTot      :: Int
@@ -79,6 +81,7 @@ data LogRevStats = LogRevStats {
   , sMap        :: StringIntMap
   , sPer        :: StringDoubleMap
 }
+
 
 data LogRevStatsAction = LogRevStatsAction {
   aHeader       :: String
@@ -92,15 +95,22 @@ instance Show LogRevStats where
   show a = printf " %d " tot
            where tot = sTot a
 
+
 instance Show LogRevStatsAction where
   show a = printf " (%s:%s) " hdr out
            where hdr = aHeader a
                  out = show $! aOutput a
 
+
 instance NFData LogLine where
   rnf a = a `seq` ()
 
+
 instance NFData LogRevStatsAction where
+  rnf a = a `seq` ()
+
+
+instance NFData LogRevOptions where
   rnf a = a `seq` ()
 
 
@@ -108,6 +118,7 @@ addIntMapEntry :: String -> StringIntMap -> StringIntMap
 addIntMapEntry loc m = if M.member loc m
                           then M.insert loc ((m M.! loc) + 1) m
                        else M.insert loc 1 m
+
 
 addPIntMapEntry :: String
                    -> Int
@@ -117,10 +128,12 @@ addPIntMapEntry loc v m = if M.member loc m
                              then M.insert loc ((m M.! loc) + v) m
                           else M.insert loc 1 m
 
+
 addFltMapEntry :: String -> StringDoubleMap -> StringDoubleMap
 addFltMapEntry loc m = if M.member loc m
                           then M.insert loc ((m M.! loc) + 1.0) m
                        else M.insert loc 1 m
+
 
 addPFltMapEntry :: String
                    -> Double
@@ -129,3 +142,4 @@ addPFltMapEntry :: String
 addPFltMapEntry loc v m = if M.member loc m
                              then M.insert loc ((m M.! loc) + v) m
                           else M.insert loc 1 m
+
