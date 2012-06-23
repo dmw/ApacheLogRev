@@ -1,4 +1,4 @@
-----------------------------------------------------------------------------
+---------------------------------------------------------------------------
 -- |
 -- Module      :  Data.LogRev.Parser
 -- Copyright   :  (c) Daniel Molina Wegener 2012
@@ -15,170 +15,174 @@
 
 
 module Data.LogRev.Parser (
-  plainValue
-  , bracketedValue
-  , quotedValue
-  , dashChar
-  , logLine
+  logLine
   , parseLogLine
   ) where
 
 
+
+import Control.Applicative ((<|>))
 import Control.DeepSeq (deepseq)
 
+import Data.Attoparsec.ByteString.Char8 hiding (space, take)
+import Data.Attoparsec.Combinator
+
 import Data.LogRev.LogStats
-import Text.ParserCombinators.Parsec
 import Text.Printf
+
+import qualified Data.ByteString.Char8 as S
 
 
 emptyString :: String
 emptyString = ""
 
 
-startLogLine :: LogLine
-startLogLine = LogLine {
-  getVhost    = ""
-  , getIP     = ""
-  , getIdent  = ""
-  , getUser   = ""
-  , getDate   = ""
-  , getReq    = ""
-  , getStatus = ""
-  , getBytes  = ""
-  , getRef    = ""
-  , getUA     = ""
-  }
+quote, lbrack, rbrack, eol, eolm, dash, dot :: Parser Char
+space = satisfy (== ' ')
+quote  = satisfy (== '\"')
+lbrack = satisfy (== '[')
+rbrack = satisfy (== ']')
+eol = satisfy (== '\n')
+eolm = satisfy (== '\r')
+dash = satisfy (== '-')
+dot = satisfy (== '.')
 
 
-validNumberChars :: String
-validNumberChars = ['0' .. '9']
+vhostClass :: String
+vhostClass = ['0' .. '9'] ++ ['a' .. 'z'] ++ ['A' .. 'Z'] ++ ".-_:"
 
 
-validVHostChars :: String
-validVHostChars = ['0' .. '9']
-                   ++ ['a' .. 'z']
-                   ++ ['A' .. 'Z']
-                   ++ ".-_:"
+numClass :: String
+numClass = ['0' .. '9']
 
 
-plainValue :: Parser String
-plainValue = do x <- many1 (noneOf " \n")
-                return x
+eolClass :: String
+eolClass = "\r\n"
 
 
-parseVHost :: GenParser Char st String
-parseVHost = do x <- many $ oneOf validVHostChars
-                return x
+spaceClass :: String
+spaceClass = "\r\n\t "
 
 
-parseIP :: GenParser Char st String
-parseIP = do o1 <- many $ oneOf validNumberChars
-             _  <- char '.'
-             o2 <- many $ oneOf validNumberChars
-             _  <- char '.'
-             o3 <- many $ oneOf validNumberChars
-             _  <- char '.'
-             o4 <- many $ oneOf validNumberChars
-             return $ printf "%s.%s.%s.%s" o1 o2 o3 o4
+numbers :: Parser S.ByteString
+numbers = takeTill (notInClass numClass)
 
 
-bracketedValue :: Parser String
-bracketedValue = do
-  _ <- char '['
-  content <- many (noneOf "]")
-  _ <- char ']'
+vhosts :: Parser S.ByteString
+vhosts = takeTill (notInClass vhostClass)
+
+
+plainVal :: Parser S.ByteString
+plainVal = takeTill (inClass spaceClass)
+
+
+ipAddr :: Parser S.ByteString
+ipAddr = takeTill (notInClass vhostClass)
+
+
+bracketVal :: Parser S.ByteString
+bracketVal = do
+  lbrack
+  content <- takeTill (== ']')
+  rbrack
   return content
 
 
-quotedValue :: Parser String
-quotedValue = do
-  _ <- char '"'
-  content <- many (noneOf "\"")
-  _ <- char '"'
+quotVal :: Parser S.ByteString
+quotVal = do
+  quote
+  content <- takeTill (== '\"')
+  quote
   return content
 
 
-dashChar :: Parser String
-dashChar = do x <- char '-'
-              return (show x)
+dashVal :: Parser S.ByteString
+dashVal = takeTill (/= '-')
 
 
 logLineVHost :: Parser LogLine
 logLineVHost = do
-  vhost <- parseVHost
-  _ <- space
-  ip <- parseIP
-  _ <- space
-  ident <- plainValue
-  _ <- space
-  user <- plainValue
-  _ <- space
-  date <- bracketedValue
-  _ <- space
-  _ <- quotedValue
-  _ <- space
-  status <- plainValue
-  _ <- space
-  bytes <- plainValue
-  _ <- space
-  ref <- dashChar <|> quotedValue
-  _ <- space
-  ua <- dashChar <|> quotedValue
-  return startLogLine {
-    getVhost    = vhost
-    , getIP     = ip
-    , getIdent  = ident
-    , getUser   = user
-    , getDate   = date
-    , getReq    = emptyString
-    , getStatus = status
-    , getBytes  = bytes
-    , getRef    = ref
-    , getUA     = ua
-    }
+  vhost <- vhosts
+  space
+  ip <- ipAddr
+  space
+  ident <- plainVal
+  space
+  user <- plainVal
+  space
+  date <- bracketVal
+  space
+  quotVal
+  space
+  status <- plainVal
+  space
+  bytes <- plainVal
+  anyChar
+  ref <- quotVal <|> dashVal
+  space
+  ua <- quotVal <|> dashVal
+  return $ let
+    _ret = LogLine {
+      getVhost    = vhost
+      , getIP     = ip
+      , getIdent  = ident
+      , getUser   = user
+      , getDate   = date
+      , getReq    = S.pack ""
+      , getStatus = status
+      , getBytes  = bytes
+      , getRef    = ref
+      , getUA     = ua
+      }
+    in _ret
 
 
 logLineBasic :: Parser LogLine
 logLineBasic = do
-  ip <- parseIP
-  _ <- space
-  ident <- plainValue
-  _ <- space
-  user <- plainValue
-  _ <- space
-  date <- bracketedValue
-  _ <- space
-  _ <- quotedValue
-  _ <- space
-  status <- plainValue
-  _ <- space
-  bytes <- plainValue
-  _ <- space
-  ref <- dashChar <|> quotedValue
-  _ <- space
-  ua <- dashChar <|> quotedValue
-  return startLogLine {
-    getVhost    = emptyString
-    , getIP     = ip
-    , getIdent  = ident
-    , getUser   = user
-    , getDate   = date
-    , getReq    = emptyString
-    , getStatus = status
-    , getBytes  = bytes
-    , getRef    = ref
-    , getUA     = ua
-    }
+  ip <- ipAddr
+  space
+  ident <- plainVal
+  space
+  user <- plainVal
+  space
+  date <- bracketVal
+  space
+  quotVal
+  space
+  status <- plainVal
+  space
+  bytes <- plainVal
+  space
+  ref <- quotVal <|> dashVal
+  space
+  ua <- quotVal <|> dashVal
+  return $ let
+    _ret = LogLine {
+      getVhost    = S.pack ""
+      , getIP     = ip
+      , getIdent  = ident
+      , getUser   = user
+      , getDate   = date
+      , getReq    = S.pack ""
+      , getStatus = status
+      , getBytes  = bytes
+      , getRef    = ref
+      , getUA     = ua
+      }
+    in _ret
 
 
 logLine :: Parser LogLine
-logLine = logLineBasic <|> logLineVHost
+logLine = logLineBasic
+          <|> logLineVHost
 
 
-parseLogLine :: String -> Maybe LogLine
-parseLogLine ~s = let
-  r = parse logLine "[Invalid]" s
-  in case r of
-          Left  _   -> Nothing
-          Right itm -> Just itm
-
+parseLogLine :: String -> Either LogError LogLine
+parseLogLine s = let
+  l = S.pack s
+  r = parse logLine l
+  n = case r of
+           Fail    p l r -> Left LogError { err = r , group = l }
+           Partial     r -> Left LogError { err = "", group = [] }
+           Done    p   r -> Right r
+  in n `deepseq` n

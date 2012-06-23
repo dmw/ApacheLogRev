@@ -32,54 +32,68 @@ import Data.Maybe
 
 
 coreStatsArgs :: LogRevStats -> LogLine -> (StringIntMap, Int, StringIntMap)
-coreStatsArgs s l = (ssm, req, szz)
-                    where ssm = seq s $ sMap s
-                          req = seq l $ getReqSz l
-                          szz = seq s $ sSz s
+coreStatsArgs s l = ssm `seq` req `seq` szz `seq` (ssm, req, szz)
+                    where ssm = sMap s
+                          req = getReqSz l
+                          szz = sSz s
+
 
 statsHandlerStatus :: LogRevOptions -> LogRevStats -> LogLine -> LogRevStats
 statsHandlerStatus o s l = r
                            where r = s { sMap   = x
                                        , sSz    = z
-                                       , sTot   = sTot s + 1
-                                       , sSzTot = sSzTot s + getReqSz l
+                                       , sTot   = m
+                                       , sSzTot = n
                                        }
                                  x = addIntMapEntry t ssm
                                  z = addPIntMapEntry t req szz
-                                 t = seq l $ getStatus l
+                                 t = B.unpack $ getStatus l
+                                 m = sTot s + 1
+                                 n = sSzTot s + getReqSz l
                                  (ssm, req, szz) = coreStatsArgs s l
+
 
 statsHandlerCountry :: LogRevOptions -> LogRevStats -> LogLine -> LogRevStats
 statsHandlerCountry o s l = r
                             where r = s { sMap   = x
                                         , sSz    = z
-                                        , sTot   = sTot s + 1
-                                        , sSzTot = sSzTot s + getReqSz l
+                                        , sTot   = m
+                                        , sSzTot = n
                                         }
                                   y = geoLookupAddr o i
                                   x = addIntMapEntry y ssm
                                   z = addPIntMapEntry y req szz
-                                  i = seq l $ getIP l
+                                  i = B.unpack $ getIP l
+                                  m = sTot s + 1
+                                  n = sSzTot s + getReqSz l
                                   (ssm, req, szz) = coreStatsArgs s l
+
 
 statsHandlerBytes :: LogRevOptions -> LogRevStats -> LogLine -> LogRevStats
 statsHandlerBytes o s l = r
                           where r = s { sMap   = x
                                       , sSz    = z
-                                      , sTot   = sTot s + 1
-                                      , sSzTot = sSzTot s + getReqSz l
+                                      , sTot   = m
+                                      , sSzTot = m
                                       }
-                                y = seq l $ getBytes l
+                                y = B.unpack $ getBytes l
                                 x = addIntMapEntry y ssm
                                 z = addPIntMapEntry y req szz
+                                m = sTot s + 1
+                                n = sSzTot s + getReqSz l
                                 (ssm, req, szz) = coreStatsArgs s l
 
+
 geoLookupAddr :: LogRevOptions -> String -> String
-geoLookupAddr o s = G.countryCode3 $! fromJust a
-                    where g = fromJust $! geoHdl o
-                          a = G.geoLocateByIPAddress g
-                              $! B.pack s
+geoLookupAddr o s = if isNothing $ geoHdl o
+                       then "X"
+                    else c
+  where g = fromJust $ geoHdl o
+        a = G.geoLocateByIPAddress g $ B.pack s
+        c = G.countryCode3 $ fromJust a
+
 
 getReqSz :: LogLine -> Int
-getReqSz l = (read . S.strip) $ getBytes l
+getReqSz l = let r = (read . S.strip . B.unpack) $ getBytes l
+             in r
 

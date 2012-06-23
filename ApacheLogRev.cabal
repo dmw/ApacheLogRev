@@ -29,11 +29,21 @@ Executable logrev
   Hs-Source-Dirs:	src
   Build-Tools:          hsc2hs
   Build-depends:
-    Chart >= 0.15, Chart-gtk >= 0.15, MissingH >= 1.1.0.3,
-    bytestring >= 0.9.1.10, colour >= 2.3.2, containers >= 0.4.0.0,
-    data-accessor >= 0.2.2.1, parsec >= 3.1.1, text >= 0.11.0.6,
-    time >= 1.2.0.3, unix >= 2.4.2.0, base >= 4 && <= 5,
-    bytestring >= 0.9, deepseq >= 1.1.0.2
+    Chart >= 0.15
+    , Chart-gtk >= 0.15
+    , MissingH >= 1.1.0.3
+    , bytestring >= 0.9.1.10
+    , colour >= 2.3.2
+    , containers >= 0.4.0.0
+    , data-accessor >= 0.2.2.1
+    , parsec >= 3.1.1
+    , text >= 0.11.0.6
+    , time >= 1.2.0.3
+    , unix >= 2.4.2.0
+    , base >= 4 && <= 5
+    , bytestring >= 0.9
+    , deepseq >= 1.1.0.2
+    , attoparsec >= 0.10.1
   Other-modules:        Data.GeoIP
                         Data.GeoIP.GeoDB
                         Data.LogRev
@@ -43,6 +53,6 @@ Executable logrev
                         Graphics.LogRev.Charts
                         Proc.LRS
                         Proc.LRS.Parser
-  -- ghc-options:          -O2 -fforce-recomp
-  ghc-options:          -O2 -rtsopts -auto-all -caf-all -fobject-code -fforce-recomp -funbox-strict-fields
+  ghc-options:          -O2 -fforce-recomp
+  -- ghc-options:          -O3 -rtsopts -auto-all -caf-all -fobject-code -fforce-recomp -funbox-strict-fields
 

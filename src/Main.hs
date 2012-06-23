@@ -13,7 +13,6 @@
 -- me directly if you want to contribute.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE BangPatterns #-}
 
 module Main (main) where
 
@@ -28,8 +27,8 @@ import Data.List
 import Data.LogRev.LogStats
 import Data.LogRev.Parser
 import Data.LogRev.Processing
+import Data.Maybe (fromJust, isJust, isNothing)
 import Graphics.LogRev.Charts
-import Data.Maybe (fromJust, isJust)
 import System.Console.GetOpt
 import System.Environment
 import System.Exit
@@ -88,15 +87,16 @@ startOptions = LogRevOptions {
   , outFile     = "report"
   , lrsFile     = "main.lrs"
   , geoHdl      = safeGeoDB
-}
+  }
 
 
 safeGeoDB :: Maybe GeoDB
 safeGeoDB = let
   geo = bringGeoCityDB
+  geoc = bringGeoCountryDB
   in if isJust geo
         then geo
-     else bringGeoCountryDB
+     else geoc
 
 
 progOptions :: [OptDescr (LogRevOptions -> IO LogRevOptions)]
@@ -146,40 +146,34 @@ applyAction :: LogRevOptions
 applyAction o a l = a { aOutput = aAction a o (aOutput a) l }
 
 
+
 procLogMachine :: LogRevOptions
-                  -> IORef LogRevStatsMap
+                  -> LogRevStatsMap
                   -> String
-                  -> IO ()
-procLogMachine o mx l = do
-  m <- readIORef mx
-  writeIORef mx
-    $! fmap (flip (applyAction o)
-             $! fromJust
-             $! parseLogLine l) m
+                  -> LogRevStatsMap
+procLogMachine o m x = let
+  ln = parseLogLine x
+  in case ln of
+          Left  e -> m
+          Right l -> let r = fmap (flip (applyAction o) l) m
+                     in r
 
 
-foldLogLines :: Handle
-                -> IORef LogRevStatsMap
-                -> LogRevOptions
-                -> IO ()
-foldLogLines h ms o = let
-  foldLogLines' hs rsx os = do
-    e <- hIsEOF hs
-    if e
-      then do
-           rs <- readIORef rsx
-           rs `seq` os `seq` procResults rs os
-      else do
-           x <- hGetLine hs
-           procLogMachine os rsx x
-           foldLogLines' hs rsx os
-  in foldLogLines' h ms o
+foldLogLines :: LogRevOptions
+                -> LogRevStatsMap
+                -> [String]
+                -> LogRevStatsMap
+foldLogLines mo ms ~ml = foldLogLines' mo ms ml
+  where foldLogLines' _ s [] = s
+        foldLogLines' o s (x : ~xs) = let
+          sm = procLogMachine o s x
+          in o `seq` sm `seq` foldLogLines' o sm xs
 
 
-procResults :: LogRevStatsMap
-               -> LogRevOptions
+procResults :: LogRevOptions
+               -> LogRevStatsMap
                -> IO ()
-procResults xs o = putStrLn report >> mapM_ mkpl mkeys
+procResults o xs = putStrLn report >> mapM_ mkpl mkeys
   where report = S.join "\n" $ fmap mkrss mkeys
         mkeys = M.keys xs
         mkpl x = aPlot (xs M.! x) o (xs M.! x)
@@ -191,15 +185,34 @@ handlerIOError e = putStrLn (printf "IOError: %s" $ show e)
                    >> exitFailure
 
 
+defOpts :: LogRevOptions -> LogRevOptions
+defOpts lo = fo `deepseq` fo
+  where optVerbose_ = lo `deepseq` optVerbose lo
+        optVersion_ = lo `deepseq` optVersion lo
+        optHelp_    = lo `deepseq` optHelp lo
+        inpFile_    = lo `deepseq` inpFile lo
+        outFile_    = lo `deepseq` outFile lo
+        lrsFile_    = lo `deepseq` lrsFile lo
+        geoHdl_     = lo `deepseq` geoHdl lo
+        fo          = LogRevOptions {
+          optVerbose   = optVerbose_
+          , optVersion = optVersion_
+          , optHelp    = optHelp_
+          , inpFile    = inpFile_
+          , outFile    = outFile_
+          , lrsFile    = lrsFile_
+          , geoHdl     = geoHdl_
+          }
+
+
 processArgs :: IO ()
 processArgs = do
     argv <- getArgs
     let (act, nopt, errs) = getOpt RequireOrder progOptions argv
     opts <- foldl (>>=) (return startOptions) act
-    hndl <- openFile (inpFile opts) ReadMode
-    refActionMap <- newIORef actionMap
     putStrLn $ printf "Processing: %s\n" (inpFile opts)
-    foldLogLines hndl refActionMap opts
+    inpData <- readFile (inpFile opts)
+    procResults opts $ foldLogLines opts actionMap $ lines inpData
 
 
 main :: IO ()

@@ -20,6 +20,7 @@ module Data.LogRev.LogStats (
   , LogRevStatsCol
   , LogRevStatsMap
   , LogLine (..)
+  , LogError (..)
   , LogRevOptions (..)
   , LogRevStats (..)
   , LogRevStatsAction (..)
@@ -32,6 +33,7 @@ module Data.LogRev.LogStats (
 
 import Control.DeepSeq
 
+import qualified Data.ByteString.Char8 as S
 import qualified Data.Map as M
 import qualified Data.GeoIP.GeoDB as G
 
@@ -50,16 +52,16 @@ type LogRevStatsMap = M.Map String LogRevStatsAction
 
 
 data LogLine = LogLine {
-  getVhost      :: String
-  , getIP       :: String
-  , getIdent    :: String
-  , getUser     :: String
-  , getDate     :: String
-  , getReq      :: String
-  , getStatus   :: String
-  , getBytes    :: String
-  , getRef      :: String
-  , getUA       :: String
+  getVhost      :: S.ByteString
+  , getIP       :: S.ByteString
+  , getIdent    :: S.ByteString
+  , getUser     :: S.ByteString
+  , getDate     :: S.ByteString
+  , getReq      :: S.ByteString
+  , getStatus   :: S.ByteString
+  , getBytes    :: S.ByteString
+  , getRef      :: S.ByteString
+  , getUA       :: S.ByteString
 } deriving (Show, Eq)
 
 
@@ -81,6 +83,12 @@ data LogRevStats = LogRevStats {
   , sMap        :: StringIntMap
   , sPer        :: StringDoubleMap
 }
+
+
+data LogError = LogError {
+  err           :: String
+  , group       :: [String]
+} deriving (Show)
 
 
 data LogRevStatsAction = LogRevStatsAction {
@@ -114,25 +122,34 @@ instance NFData LogRevOptions where
   rnf a = a `seq` ()
 
 
-addIntMapEntry :: String -> StringIntMap -> StringIntMap
-addIntMapEntry loc m = if M.member loc m
-                          then M.insert loc ((m M.! loc) + 1) m
-                       else M.insert loc 1 m
+instance NFData LogError where
+  rnf a = a `seq` ()
+
+
+
+addIntMapEntry :: String
+                  -> StringIntMap
+                  -> StringIntMap
+addIntMapEntry loc m = res `seq` res
+  where res = if M.member loc m
+                 then let r = M.insert loc ((m M.! loc) + 1) m in r
+              else let r = M.insert loc 1 m in r
 
 
 addPIntMapEntry :: String
                    -> Int
                    -> StringIntMap
                    -> StringIntMap
-addPIntMapEntry loc v m = if M.member loc m
-                             then M.insert loc ((m M.! loc) + v) m
-                          else M.insert loc 1 m
+addPIntMapEntry loc v m = res `seq` res
+  where res = if M.member loc m
+                 then let r = M.insert loc ((m M.! loc) + v) m in r
+              else let r = M.insert loc 1 m in r
 
 
 addFltMapEntry :: String -> StringDoubleMap -> StringDoubleMap
 addFltMapEntry loc m = if M.member loc m
-                          then M.insert loc ((m M.! loc) + 1.0) m
-                       else M.insert loc 1 m
+                          then let r = M.insert loc ((m M.! loc) + 1.0) m in r
+                       else let r = M.insert loc 1 m in r
 
 
 addPFltMapEntry :: String
@@ -140,6 +157,6 @@ addPFltMapEntry :: String
                    -> StringDoubleMap
                    -> StringDoubleMap
 addPFltMapEntry loc v m = if M.member loc m
-                             then M.insert loc ((m M.! loc) + v) m
-                          else M.insert loc 1 m
+                             then let r = M.insert loc ((m M.! loc) + v) m in r
+                          else let r = M.insert loc 1 m in r
 
